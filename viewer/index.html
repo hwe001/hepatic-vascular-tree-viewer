@@ -14,6 +14,8 @@
     button { margin: 5px 5px 0 0; padding: 6px 9px; border: 1px solid #c5ccd4; border-radius: 6px; background: white; cursor: pointer; }
     #hint, #status { margin-top: 8px; font-size: 11px; color: #68727c; line-height: 1.35; }
     .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+    #segmentLegend { display: none; margin-top: 8px; font-size: 11px; line-height: 1.45; }
+    .segmentItem { display: inline-block; width: 78px; }
   </style>
 </head>
 <body>
@@ -24,8 +26,11 @@
     <label><input id="showHepatic" type="checkbox" checked> <span class="swatch" style="background:#8e44ad"></span>Hepatic vein</label>
     <label><input id="showBiliary" type="checkbox" checked> <span class="swatch" style="background:#008c95"></span>Biliary tree</label>
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface</label>
+    <label><input id="showSegments" type="checkbox"> Portal zones / Couinaud segments</label>
     <label>Surface opacity <input id="opacity" type="range" min="0.05" max="0.8" step="0.05" value="0.18"> <output id="opacityValue">0.18</output></label>
+    <label>Segment opacity <input id="segmentOpacity" type="range" min="0.15" max="0.8" step="0.05" value="0.45"> <output id="segmentOpacityValue">0.45</output></label>
     <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
+    <div id="segmentLegend"></div>
     <div id="hint">Rotate: left-drag · Pan: right-drag · Zoom: wheel/middle-drag</div>
     <div id="status">Loading vascular geometry...</div>
   </div>
@@ -46,7 +51,9 @@
     const key = new THREE.DirectionalLight(0xffffff, 1.8); key.position.set(1, 2, 3); scene.add(key);
     const group = new THREE.Group(); scene.add(group);
     const loader = new THREE.JSONLoader(); let surface, surfaceMaterial, wireframe = false;
-    const vessels = {};
+    const vessels = {}; let segmentOverlay, segmentMaterials = [], segmentBuilt = false;
+    const segmentColors = [0xe41a1c,0xff7f00,0x4daf4a,0x377eb8,0x984ea3,0xa65628,0xf781bf,0x17becf];
+    const segmentLabels = ['I (caudate)','II','III','IV','V','VI','VII','VIII'];
     const assets = [
       ['arterial', 'Hepatic artery', '../data/libzinc-json/arterial15_1.json', 0xd73027],
       ['portal', 'Portal vein', '../data/libzinc-json/portal15_1.json', 0x2878b5],
@@ -60,10 +67,47 @@
         const mesh = new THREE.Mesh(geometry, material); mesh.name = label; group.add(mesh); vessels[kind] = mesh; resolve(geometry);
       }, undefined, reject));
     }
-    function loadSurface() {
+    function buildPortalZones(surfaceGeometry, portalGeometry) {
+      const portalPoints = portalGeometry.vertices.map(v => v.clone());
+      const centers = [];
+      centers.push(portalPoints[Math.floor(portalPoints.length / 2)].clone());
+      while (centers.length < 8) {
+        let best = portalPoints[0], bestDistance = -1;
+        portalPoints.forEach(point => {
+          const distance = Math.min.apply(null, centers.map(center => point.distanceToSquared(center)));
+          if (distance > bestDistance) { bestDistance = distance; best = point; }
+        });
+        centers.push(best.clone());
+      }
+      for (let iteration = 0; iteration < 8; iteration++) {
+        const sums = centers.map(() => new THREE.Vector3()), counts = centers.map(() => 0);
+        portalPoints.forEach(point => {
+          let index = 0, distance = Infinity;
+          centers.forEach((center, i) => { const d = point.distanceToSquared(center); if (d < distance) { distance = d; index = i; } });
+          sums[index].add(point); counts[index]++;
+        });
+        centers.forEach((center, i) => { if (counts[i]) center.copy(sums[i]).multiplyScalar(1 / counts[i]); });
+      }
+      const zoneForVertex = surfaceGeometry.vertices.map(point => {
+        let index = 0, distance = Infinity;
+        centers.forEach((center, i) => { const d = point.distanceToSquared(center); if (d < distance) { distance = d; index = i; } });
+        return index;
+      });
+      const overlayGeometry = new THREE.Geometry();
+      overlayGeometry.vertices = surfaceGeometry.vertices.map(v => v.clone());
+      for (let i = 0; i < surfaceGeometry.faces.length; i++) {
+        const face = surfaceGeometry.faces[i], zone = zoneForVertex[face.a];
+        const copy = face.clone(); copy.materialIndex = zone; overlayGeometry.faces.push(copy);
+      }
+      segmentMaterials = segmentColors.map(color => new THREE.MeshPhongMaterial({color, transparent:true, opacity:.45, side:THREE.DoubleSide, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}));
+      segmentOverlay = new THREE.Mesh(overlayGeometry, segmentMaterials); segmentOverlay.name = 'Portal perfusion zones (exploratory Couinaud labels)'; segmentOverlay.visible = false; group.add(segmentOverlay);
+      segmentBuilt = true;
+      const legend = document.getElementById('segmentLegend'); legend.innerHTML = segmentLabels.map((label, i) => '<span class="segmentItem"><span class="swatch" style="background:#' + segmentColors[i].toString(16).padStart(6,'0') + '"></span>' + label + '</span>').join('');
+    }
+    function loadSurface(portalGeometry) {
       return new Promise((resolve, reject) => loader.load('../data/libzinc-json/surface15_1.json', geometry => {
         geometry.computeBoundingBox(); surfaceMaterial = new THREE.MeshPhongMaterial({color:0xd9a441,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false});
-        surface = new THREE.Mesh(geometry, surfaceMaterial); surface.name = 'Liver surface'; group.add(surface); resolve(geometry);
+        surface = new THREE.Mesh(geometry, surfaceMaterial); surface.name = 'Liver surface'; group.add(surface); buildPortalZones(geometry, portalGeometry); resolve(geometry);
       }, undefined, reject));
     }
     function fitView() { const box = new THREE.Box3().setFromObject(group), size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3()), radius = Math.max(size.x,size.y,size.z)*.5||1; camera.position.copy(center).add(new THREE.Vector3(radius*1.7,radius*1.25,radius*2.3)); camera.near=Math.max(radius/1000,.01); camera.far=Math.max(radius*20,100); camera.updateProjectionMatrix(); controls.target.copy(center); controls.update(); }
@@ -73,10 +117,12 @@
     document.getElementById('showHepatic').onchange = e => vessels.hepatic.visible=e.target.checked;
     document.getElementById('showBiliary').onchange = e => vessels.biliary.visible=e.target.checked;
     document.getElementById('showSurface').onchange = e => surface.visible=e.target.checked;
+    document.getElementById('showSegments').onchange = e => { segmentOverlay.visible=e.target.checked; document.getElementById('segmentLegend').style.display=e.target.checked?'block':'none'; };
     document.getElementById('opacity').oninput = e => { surfaceMaterial.opacity=+e.target.value; document.getElementById('opacityValue').value=e.target.value; };
+    document.getElementById('segmentOpacity').oninput = e => { segmentMaterials.forEach(m=>m.opacity=+e.target.value); document.getElementById('segmentOpacityValue').value=e.target.value; };
     document.getElementById('fit').onclick=fitView;
     document.getElementById('wire').onclick=e => { wireframe=!wireframe; surfaceMaterial.wireframe=wireframe; e.target.textContent=wireframe?'Solid surface':'Surface wireframe'; };
-    Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3])).concat(loadSurface())).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded hepatic artery, portal vein, hepatic vein, biliary tree, and liver surface.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
+    Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3]))).then(gs=>loadSurface(vessels.portal.geometry)).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded the four matched trees and liver surface. Portal zones are available as an exploratory segmentation.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
     addEventListener('resize',resize); resize();
     (function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
   </script>
