@@ -26,7 +26,7 @@
     <label><input id="showHepatic" type="checkbox" checked> <span class="swatch" style="background:#8e44ad"></span>Hepatic vein</label>
     <label><input id="showBiliary" type="checkbox" checked> <span class="swatch" style="background:#008c95"></span>Biliary tree</label>
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface</label>
-    <label><input id="showSegments" type="checkbox"> Portal zones / Couinaud segments</label>
+    <label><input id="showSegments" type="checkbox" checked> Portal zones / Couinaud segments (exploratory)</label>
     <label>Surface opacity <input id="opacity" type="range" min="0.05" max="0.8" step="0.05" value="0.18"> <output id="opacityValue">0.18</output></label>
     <label>Segment opacity <input id="segmentOpacity" type="range" min="0.15" max="0.8" step="0.05" value="0.45"> <output id="segmentOpacityValue">0.45</output></label>
     <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
@@ -100,9 +100,9 @@
         const copy = face.clone(); copy.materialIndex = zone; overlayGeometry.faces.push(copy);
       }
       segmentMaterials = segmentColors.map(color => new THREE.MeshPhongMaterial({color, transparent:true, opacity:.45, side:THREE.DoubleSide, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1}));
-      segmentOverlay = new THREE.Mesh(overlayGeometry, segmentMaterials); segmentOverlay.name = 'Portal perfusion zones (exploratory Couinaud labels)'; segmentOverlay.visible = false; group.add(segmentOverlay);
+      segmentOverlay = new THREE.Mesh(overlayGeometry, segmentMaterials); segmentOverlay.name = 'Portal perfusion zones (exploratory Couinaud labels)'; segmentOverlay.visible = document.getElementById('showSegments').checked; group.add(segmentOverlay);
       segmentBuilt = true;
-      const legend = document.getElementById('segmentLegend'); legend.innerHTML = segmentLabels.map((label, i) => '<span class="segmentItem"><span class="swatch" style="background:#' + segmentColors[i].toString(16).padStart(6,'0') + '"></span>' + label + '</span>').join('');
+      const legend = document.getElementById('segmentLegend'); legend.innerHTML = segmentLabels.map((label, i) => '<span class="segmentItem"><span class="swatch" style="background:#' + segmentColors[i].toString(16).padStart(6,'0') + '"></span>' + label + '</span>').join(''); legend.style.display = segmentOverlay.visible ? 'block' : 'none';
     }
     function loadSurface(portalGeometry) {
       return new Promise((resolve, reject) => loader.load('../data/libzinc-json/surface15_1.json', geometry => {
