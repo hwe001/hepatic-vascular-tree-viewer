@@ -48,7 +48,7 @@
     function resected(){return document.getElementById('scenario').value==='right'?[5,6,7,8]:[]}
     function pointInResectedSide(p){const plane=surfaceResectionPlane();return !!plane&&p.clone().sub(plane.point).dot(plane.normal)>0}
     function retainedZone(id){const z=nodeZone[id];return document.getElementById('scenario').value==='right'&&z>=1&&z<=4}
-    function edgeInResectedSide(e){const a=nodeById[e.a],b=nodeById[e.b];if(!a||!b||retainedZone(e.a)||retainedZone(e.b))return false;const pa=new THREE.Vector3(...a.p),pb=new THREE.Vector3(...b.p),mid=pa.clone().add(pb).multiplyScalar(.5);return pointInResectedSide(pa)||pointInResectedSide(pb)||pointInResectedSide(mid)}
+    function edgeInResectedSide(e){const a=nodeById[e.a],b=nodeById[e.b];if(!a||!b||retainedZone(e.a)||retainedZone(e.b))return false;const pa=new THREE.Vector3(...a.p),pb=new THREE.Vector3(...b.p);/* Keep the boundary link into the remnant; remove only segments with both endpoints in the resected side. */return pointInResectedSide(pa)&&pointInResectedSide(pb)}
     function edgeRemoved(e){return document.getElementById('hideResected').checked&&(!visibleEdges.has(e)||(!inflowEdges.has(e)&&edgeInResectedSide(e)))}
     function allEdges(data){return (data.edges||[]).concat(virtualEdges)}
     function buildContinuityEdges(data){const by={};(data.nodes||[]).forEach(n=>by[n.id]=n);const pairs=[[2,3],[4,5],[21,22],[34,35],[6,7],[14,15],[16,17]];virtualEdges=pairs.map(pair=>{const a=by[pair[0]],b=by[pair[1]];if(!a||!b)return null;return {a:a.id,b:b.id,scaffold:true,virtual:true,radius:Math.min(+a.radius||0.65,+b.radius||0.65)} }).filter(Boolean)}
