@@ -1,6 +1,6 @@
 {
-  "resource_name": "matched-hepatic-vascular-tree-viewer",
-  "release": "1.0.0",
+  "resource_name": "matched-hepatic-vascular-and-biliary-tree-viewer",
+  "release": "1.1.0",
   "source_repository": "https://github.com/hwe001/hyu754.github.io",
   "source_directory": "liverModelPatient1",
   "coordinate_context": "15 asset set",
@@ -8,6 +8,7 @@
     "hepatic_artery": "data/libzinc-json/arterial15_1.json",
     "portal_vein": "data/libzinc-json/portal15_1.json",
     "hepatic_vein": "data/libzinc-json/hepatic15_1.json",
+    "biliary_tree": "data/libzinc-json/S01_bile_1.json",
     "liver_surface": "data/libzinc-json/surface15_1.json"
   },
   "format": "LibZinc legacy JSON / Three.js-compatible geometry",
