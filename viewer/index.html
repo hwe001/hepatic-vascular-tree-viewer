@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Matched hepatic vascular trees in liver geometry</title>
+  <title>Matched hepatic vascular and biliary trees in liver geometry</title>
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, sans-serif; background: #f7f8fa; }
     #view { width: 100%; height: 100%; display: block; }
@@ -18,10 +18,11 @@
 </head>
 <body>
   <div id="panel">
-    <h1>Matched hepatic vascular trees</h1>
+    <h1>Matched hepatic vascular and biliary trees</h1>
     <label><input id="showArterial" type="checkbox" checked> <span class="swatch" style="background:#d73027"></span>Hepatic artery</label>
     <label><input id="showPortal" type="checkbox" checked> <span class="swatch" style="background:#2878b5"></span>Portal vein</label>
     <label><input id="showHepatic" type="checkbox" checked> <span class="swatch" style="background:#8e44ad"></span>Hepatic vein</label>
+    <label><input id="showBiliary" type="checkbox" checked> <span class="swatch" style="background:#008c95"></span>Biliary tree</label>
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface</label>
     <label>Surface opacity <input id="opacity" type="range" min="0.05" max="0.8" step="0.05" value="0.18"> <output id="opacityValue">0.18</output></label>
     <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
@@ -49,7 +50,8 @@
     const assets = [
       ['arterial', 'Hepatic artery', '../data/libzinc-json/arterial15_1.json', 0xd73027],
       ['portal', 'Portal vein', '../data/libzinc-json/portal15_1.json', 0x2878b5],
-      ['hepatic', 'Hepatic vein', '../data/libzinc-json/hepatic15_1.json', 0x8e44ad]
+      ['hepatic', 'Hepatic vein', '../data/libzinc-json/hepatic15_1.json', 0x8e44ad],
+      ['biliary', 'Biliary tree', '../data/libzinc-json/S01_bile_1.json', 0x008c95]
     ];
     function loadAsset(url, kind, label, color) {
       return new Promise((resolve, reject) => loader.load(url, geometry => {
@@ -69,11 +71,12 @@
     document.getElementById('showArterial').onchange = e => vessels.arterial.visible=e.target.checked;
     document.getElementById('showPortal').onchange = e => vessels.portal.visible=e.target.checked;
     document.getElementById('showHepatic').onchange = e => vessels.hepatic.visible=e.target.checked;
+    document.getElementById('showBiliary').onchange = e => vessels.biliary.visible=e.target.checked;
     document.getElementById('showSurface').onchange = e => surface.visible=e.target.checked;
     document.getElementById('opacity').oninput = e => { surfaceMaterial.opacity=+e.target.value; document.getElementById('opacityValue').value=e.target.value; };
     document.getElementById('fit').onclick=fitView;
     document.getElementById('wire').onclick=e => { wireframe=!wireframe; surfaceMaterial.wireframe=wireframe; e.target.textContent=wireframe?'Solid surface':'Surface wireframe'; };
-    Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3])).concat(loadSurface())).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded hepatic artery, portal vein, hepatic vein, and liver surface in the 15 asset coordinate context.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
+    Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3])).concat(loadSurface())).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded hepatic artery, portal vein, hepatic vein, biliary tree, and liver surface.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
     addEventListener('resize',resize); resize();
     (function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
   </script>
