@@ -18,6 +18,7 @@
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface reference</label>
     <label><input id="showNodes" type="checkbox"> Show nodes</label>
     <label>Tree opacity <input id="treeOpacity" type="range" min="0.25" max="1" step="0.05" value="0.95"> <output id="treeOpacityValue">0.95</output></label>
+    <label>Radius scale <input id="radiusScale" type="range" min="1" max="8" step="0.25" value="3"> <output id="radiusScaleValue">3x</output></label>
     <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
     <div id="meta">Load a generated <code>cco_post_s*.json</code> file from the private CCO pipeline.</div>
     <div id="hint">Rotate: left-drag · Pan: right-drag · Zoom: wheel/middle-drag</div>
@@ -34,25 +35,24 @@
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,10000),controls=new THREE.OrbitControls(camera,renderer.domElement);
     controls.enableDamping=true;controls.enablePan=true;controls.screenSpacePanning=true;controls.mouseButtons={ORBIT:THREE.MOUSE.LEFT,ZOOM:THREE.MOUSE.MIDDLE,PAN:THREE.MOUSE.RIGHT};
     scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.6));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);
-    const group=new THREE.Group();scene.add(group);let treeGroup=null,nodesGroup=null,surface=null,surfaceMaterial=null,wire=false;
+    const group=new THREE.Group();scene.add(group);let treeGroup=null,nodesGroup=null,surface=null,surfaceMaterial=null,wire=false,currentData=null;
     const loader=new THREE.JSONLoader(),stlLoader=new THREE.STLLoader();
     function loadGeometry(url){return new Promise((resolve,reject)=>loader.load(url,g=>resolve(g),undefined,reject));}
     function loadSTL(url){return new Promise((resolve,reject)=>stlLoader.load(url,g=>resolve(g),undefined,reject));}
     function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
-    function showTree(data){if(treeGroup)group.remove(treeGroup);if(nodesGroup)group.remove(nodesGroup);treeGroup=new THREE.Group();nodesGroup=new THREE.Group();
-      const scaffoldMaterial=new THREE.LineBasicMaterial({color:0x243b72,transparent:true,opacity:.98});
-      const generatedMaterial=new THREE.LineBasicMaterial({color:0x2aa876,transparent:true,opacity:.9});
-      const scaffoldGeometry=new THREE.Geometry(),generatedGeometry=new THREE.Geometry();
-      (data.edges||[]).forEach(edge=>{const pts=(edge.curve||[data.nodes.find(n=>n.id===edge.a).p,data.nodes.find(n=>n.id===edge.b).p]).map(p=>new THREE.Vector3(p[0],p[1],p[2]));const g=edge.scaffold?scaffoldGeometry:generatedGeometry;for(let i=0;i<pts.length-1;i++){g.vertices.push(pts[i],pts[i+1]);}});
-      treeGroup.add(new THREE.Line(scaffoldGeometry,scaffoldMaterial,THREE.LinePieces));
-      treeGroup.add(new THREE.Line(generatedGeometry,generatedMaterial,THREE.LinePieces));
+    function makeRadiusMesh(data,scaffold,material){const geo=new THREE.Geometry(),scale=+document.getElementById('radiusScale').value;const byId={};(data.nodes||[]).forEach(n=>byId[n.id]=n);(data.edges||[]).filter(e=>!!e.scaffold===scaffold).forEach(e=>{const A=new THREE.Vector3(...byId[e.a].p),B=new THREE.Vector3(...byId[e.b].p),v=B.clone().sub(A),L=v.length();if(L<1e-6)return;const r=Math.max(0.06,(+e.radius||0.18)*scale);const g=new THREE.CylinderGeometry(r,r,L,6,1,false);const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),v.clone().normalize());const m=new THREE.Matrix4();m.makeRotationFromQuaternion(q);m.setPosition(A.clone().add(B).multiplyScalar(.5));geo.merge(g,m);});const mesh=new THREE.Mesh(geo,material);return mesh}
+    function showTree(data){currentData=data;if(treeGroup)group.remove(treeGroup);if(nodesGroup)group.remove(nodesGroup);treeGroup=new THREE.Group();nodesGroup=new THREE.Group();
+      const scaffoldMaterial=new THREE.MeshPhongMaterial({color:0x243b72,transparent:true,opacity:.98});
+      const generatedMaterial=new THREE.MeshPhongMaterial({color:0x2aa876,transparent:true,opacity:.9});
+      treeGroup.add(makeRadiusMesh(data,true,scaffoldMaterial));
+      treeGroup.add(makeRadiusMesh(data,false,generatedMaterial));
       if(document.getElementById('showNodes').checked){const nodeGeometry=new THREE.Geometry();(data.nodes||[]).forEach(n=>nodeGeometry.vertices.push(new THREE.Vector3(n.p[0],n.p[1],n.p[2])));nodesGroup.add(new THREE.Points(nodeGeometry,new THREE.PointsMaterial({color:0xe67e22,size:1.2,sizeAttenuation:true})))}
       group.add(treeGroup);group.add(nodesGroup);nodesGroup.visible=document.getElementById('showNodes').checked;document.getElementById('treeOpacity').oninput=e=>{scaffoldMaterial.opacity=+e.target.value;generatedMaterial.opacity=+e.target.value;document.getElementById('treeOpacityValue').value=e.target.value};
       const s=data.summary||{},a=data.assumptions||{};document.getElementById('meta').innerHTML=`<b>${data.label||data.id||'CCO tree'}</b><br>Nodes: ${(data.nodes||[]).length} · Edges: ${(data.edges||[]).length}<br>Terminals: ${a.terminalCountFinal??'n/a'} · Flow: ${s.totalFlowMlMin??'n/a'} mL/min · Generations: ${s.maxTerminalGeneration??'n/a'}`;
       document.getElementById('status').textContent='Loaded volume-filling CCO output. Geometry is generated by a single-tree, containment-constrained pipeline.';fit();
     }
     document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{showTree(JSON.parse(r.result))}catch(err){document.getElementById('status').textContent='Could not parse this JSON file.'}};r.readAsText(f)};
-    document.getElementById('showNodes').onchange=e=>{if(nodesGroup)nodesGroup.visible=e.target.checked};document.getElementById('showSurface').onchange=e=>{if(surface)surface.visible=e.target.checked};document.getElementById('fit').onclick=fit;document.getElementById('wire').onclick=e=>{wire=!wire;if(surfaceMaterial)surfaceMaterial.wireframe=wire;e.target.textContent=wire?'Solid surface':'Surface wireframe'};
+    document.getElementById('showNodes').onchange=e=>{if(nodesGroup)nodesGroup.visible=e.target.checked};document.getElementById('showSurface').onchange=e=>{if(surface)surface.visible=e.target.checked};document.getElementById('radiusScale').oninput=e=>{document.getElementById('radiusScaleValue').value=e.target.value+'x';if(currentData)showTree(currentData)};document.getElementById('fit').onclick=fit;document.getElementById('wire').onclick=e=>{wire=!wire;if(surfaceMaterial)surfaceMaterial.wireframe=wire;e.target.textContent=wire?'Solid surface':'Surface wireframe'};
     function addSurface(g){g.computeBoundingBox();surfaceMaterial=new THREE.MeshPhongMaterial({color:0xd9a441,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});surface=new THREE.Mesh(g,surfaceMaterial);group.add(surface);fit()}
     loadSTL('../cco/data/S2.stl?v=volume-fill-1').then(addSurface).catch(()=>loadGeometry('../data/libzinc-json/surface15_1.json').then(addSurface).catch(()=>{}));
     fetch('../cco/data/cco_post_s2_scaffold_pruned_2x.json?v=scaffold-pruned-2x-1').then(r=>{if(!r.ok)throw new Error('bundled output unavailable');return r.json()}).then(showTree).catch(()=>{document.getElementById('status').textContent='Could not load the bundled tree. Choose a cco_post_s*.json file above.'});
