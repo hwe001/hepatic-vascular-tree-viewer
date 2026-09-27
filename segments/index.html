@@ -55,8 +55,8 @@
       document.getElementById('legend').innerHTML=labels.map((l,i)=>'<span class="segmentItem"><span class="swatch" style="background:#'+colors[i].toString(16).padStart(6,'0')+'"></span>'+l+'</span>').join('');
     }
     function buildZonesFromVolume(data){
-      zoneMaterials=colors.map(c=>new THREE.PointsMaterial({color:c,size:4.5,transparent:true,opacity:.68,sizeAttenuation:true,depthTest:true,depthWrite:false}));
-      zones=new THREE.Group(); data.zones.forEach((zone,i)=>{const geometry=new THREE.Geometry();const p=zone.points;for(let j=0;j<p.length;j+=3)geometry.vertices.push(new THREE.Vector3(p[j],p[j+1],p[j+2]));const cloud=new THREE.Points(geometry,zoneMaterials[i]);cloud.renderOrder=5;zones.add(cloud)});zones.visible=true;group.add(zones);
+      zoneMaterials=colors.map(c=>new THREE.MeshPhongMaterial({color:c,transparent:true,opacity:.52,side:THREE.DoubleSide,depthWrite:false,shininess:25}));
+      zones=new THREE.Group(); data.zones.forEach((zone,i)=>{const geometry=new THREE.Geometry(),v=zone.vertices,f=zone.faces;for(let j=0;j<v.length;j+=3)geometry.vertices.push(new THREE.Vector3(v[j],v[j+1],v[j+2]));for(let j=0;j<f.length;j+=3)geometry.faces.push(new THREE.Face3(f[j],f[j+1],f[j+2]));geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,zoneMaterials[i]);mesh.renderOrder=5;zones.add(mesh)});zones.visible=true;group.add(zones);
       document.getElementById('legend').innerHTML=labels.map((l,i)=>'<span class="segmentItem"><span class="swatch" style="background:#'+colors[i].toString(16).padStart(6,'0')+'"></span>'+l+'</span>').join('');
     }
     function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
