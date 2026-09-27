@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import trimesh
+from skimage.measure import marching_cubes
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "libzinc-json"
@@ -46,19 +47,27 @@ def farthest_seeds(points, count=8):
 surface_vertices, surface_faces = load_legacy_geometry(DATA / "surface15_1.json")
 portal_vertices, _ = load_legacy_geometry(DATA / "portal15_1.json")
 surface_mesh = trimesh.Trimesh(surface_vertices, surface_faces, process=False)
-occupied = surface_mesh.voxelized(pitch=4.0).fill()
+pitch = 4.0
+occupied = surface_mesh.voxelized(pitch=pitch).fill()
 points = np.asarray(occupied.points)
 seeds = farthest_seeds(portal_vertices)
 labels = ((points[:, None, :] - seeds[None, :, :]) ** 2).sum(axis=2).argmin(axis=1)
 
 zones = []
 for zone in range(8):
-    zone_points = points[labels == zone]
-    zones.append({"label": zone + 1, "points": zone_points.reshape(-1).round(4).tolist()})
+    mask = np.zeros(occupied.matrix.shape, dtype=np.float32)
+    mask[occupied.sparse_indices[labels == zone, 0], occupied.sparse_indices[labels == zone, 1], occupied.sparse_indices[labels == zone, 2]] = 1.0
+    vertices, faces, _, _ = marching_cubes(mask, level=.5, spacing=(pitch, pitch, pitch), step_size=1)
+    vertices += occupied.transform[:3, 3]
+    zones.append({
+        "label": zone + 1,
+        "vertices": vertices.reshape(-1).round(4).tolist(),
+        "faces": faces.reshape(-1).tolist(),
+    })
 
 OUT.write_text(json.dumps({
     "method": "liver-surface voxel occupancy with nearest portal-seed assignment",
-    "voxel_pitch": 4.0,
+    "voxel_pitch": pitch,
     "coordinate_context": "15 asset set",
     "zones": zones,
 }, separators=(",", ":")), encoding="utf-8")
