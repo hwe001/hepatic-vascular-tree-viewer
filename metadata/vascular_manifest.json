@@ -12,5 +12,8 @@
     "liver_surface": "data/libzinc-json/surface15_1.json"
   },
   "format": "LibZinc legacy JSON / Three.js-compatible geometry",
+  "derived_overlays": {
+    "portal_zones": "Eight exploratory portal-proximity regions rendered on the liver surface; provisional Couinaud I-VIII labels"
+  },
   "physiological_interpretation": "geometry and visualization only; no calibrated flow fields"
 }
