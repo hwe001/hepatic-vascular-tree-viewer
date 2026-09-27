@@ -42,17 +42,38 @@ for point in sorted(scaffold, key=lambda p: float(np.linalg.norm(p - root))):
     parents.append(parent)
     segments.append({"a": nodes[parent].tolist(), "b": point.tolist(), "kind": "scaffold"})
 
-# Add terminal perfusion targets from each current portal zone. Connecting the
-# targets one at a time is the constructive part of this prototype; the
-# objective is short, non-crossing-ish connections with balanced terminal load.
+max_generation = 0
+
+
+def add_recursive_group(targets, parent_index, generation, zone):
+    global max_generation
+    max_generation = max(max_generation, generation)
+    if len(targets) == 1:
+        point = targets[0]
+        nodes.append(point)
+        parents.append(parent_index)
+        segments.append({"a": nodes[parent_index].tolist(), "b": point.tolist(), "kind": "grown", "zone": zone, "generation": generation})
+        return
+    center = targets.mean(axis=0)
+    nodes.append(center)
+    branch_index = len(nodes) - 1
+    parents.append(parent_index)
+    segments.append({"a": nodes[parent_index].tolist(), "b": center.tolist(), "kind": "grown", "zone": zone, "generation": generation})
+    axis = np.linalg.svd(targets - center, full_matrices=False)[2][0]
+    order = np.argsort((targets - center) @ axis)
+    midpoint = max(1, len(order) // 2)
+    add_recursive_group(targets[order[:midpoint]], branch_index, generation + 1, zone)
+    add_recursive_group(targets[order[midpoint:]], branch_index, generation + 1, zone)
+
+
+# Add terminal perfusion targets from each current portal zone. The targets
+# are connected recursively, so each zone develops intermediate generations
+# instead of attaching every terminal directly to the scaffold.
 for zone_index, zone in enumerate(volume["zones"]):
     vertices = np.asarray(zone["vertices"], dtype=float).reshape(-1, 3)
     targets = farthest(vertices, 180)
-    for target in sorted(targets, key=lambda p: float(np.linalg.norm(p - root))):
-        parent = nearest_parent(target, np.asarray(nodes))
-        nodes.append(target)
-        parents.append(parent)
-        segments.append({"a": nodes[parent].tolist(), "b": target.tolist(), "kind": "grown", "zone": zone_index + 1})
+    zone_parent = nearest_parent(targets.mean(axis=0), np.asarray(nodes))
+    add_recursive_group(targets, zone_parent, 1, zone_index + 1)
 
 # Murray-style relative radius assignment from terminal load. Each new target
 # contributes one unit of terminal demand; parent radii scale with downstream
@@ -75,6 +96,7 @@ for i in range(1, len(nodes)):
     "coordinate_context": "15 asset set",
     "scaffold_nodes": len(scaffold),
     "grown_terminals": 8 * 180,
+    "growth_generations": max_generation,
     "segments": segments,
     "limitations": "The source portal JSON is a triangulated surface mesh without an annotated centreline. Added branches are synthetic visualization geometry, not a validated subject-specific reconstruction.",
 }, separators=(",", ":")), encoding="utf-8")
