@@ -47,7 +47,7 @@ for point in sorted(scaffold, key=lambda p: float(np.linalg.norm(p - root))):
 # objective is short, non-crossing-ish connections with balanced terminal load.
 for zone_index, zone in enumerate(volume["zones"]):
     vertices = np.asarray(zone["vertices"], dtype=float).reshape(-1, 3)
-    targets = farthest(vertices, 18)
+    targets = farthest(vertices, 180)
     for target in sorted(targets, key=lambda p: float(np.linalg.norm(p - root))):
         parent = nearest_parent(target, np.asarray(nodes))
         nodes.append(target)
@@ -74,7 +74,7 @@ for i in range(1, len(nodes)):
     "method": "CCO-style synthetic extension from the portal15 geometric scaffold",
     "coordinate_context": "15 asset set",
     "scaffold_nodes": len(scaffold),
-    "grown_terminals": 8 * 18,
+    "grown_terminals": 8 * 180,
     "segments": segments,
     "limitations": "The source portal JSON is a triangulated surface mesh without an annotated centreline. Added branches are synthetic visualization geometry, not a validated subject-specific reconstruction.",
 }, separators=(",", ":")), encoding="utf-8")
