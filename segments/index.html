@@ -13,7 +13,7 @@
 </head>
 <body>
   <div id="panel">
-    <h1>Portal vein and Couinaud zones</h1>
+    <h1>Portal vein and independent Couinaud zones</h1>
     <label><input id="showPortal" type="checkbox" checked> <span class="swatch" style="background:#2878b5"></span>Portal vein</label>
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface</label>
     <label><input id="showSegments" type="checkbox" checked> <span>Eight portal zones</span></label>
@@ -41,18 +41,23 @@
       const points=portalGeometry.vertices.map(v=>v.clone()), centers=[points[Math.floor(points.length/2)].clone()];
       while(centers.length<8){let best=points[0],score=-1;points.forEach(p=>{const d=Math.min.apply(null,centers.map(c=>p.distanceToSquared(c)));if(d>score){score=d;best=p}});centers.push(best.clone())}
       for(let k=0;k<8;k++){const sums=centers.map(()=>new THREE.Vector3()),counts=centers.map(()=>0);points.forEach(p=>{let j=0,d0=Infinity;centers.forEach((c,i)=>{const d=p.distanceToSquared(c);if(d<d0){d0=d;j=i}});sums[j].add(p);counts[j]++});centers.forEach((c,i)=>{if(counts[i])c.copy(sums[i]).multiplyScalar(1/counts[i])})}
-      const zoneFor=surfaceGeometry.vertices.map(p=>{let j=0,d0=Infinity;centers.forEach((c,i)=>{const d=p.distanceToSquared(c);if(d<d0){d0=d;j=i}});return j});
-      const geoms=labels.map(()=>{const g=new THREE.Geometry();g.vertices=surfaceGeometry.vertices.map(v=>v.clone());return g});
-      surfaceGeometry.faces.forEach(face=>{const z=[zoneFor[face.a],zoneFor[face.b],zoneFor[face.c]];const zone=z.sort((a,b)=>z.filter(x=>x===b).length-z.filter(x=>x===a).length)[0];geoms[zone].faces.push(face.clone())});
-      zoneMaterials=colors.map(c=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.68,side:THREE.DoubleSide,depthTest:false,depthWrite:false}));
-      zones=new THREE.Group();geoms.forEach((g,i)=>{const m=new THREE.Mesh(g,zoneMaterials[i]);m.renderOrder=10;zones.add(m)});zones.visible=true;group.add(zones);
+      const box=surfaceGeometry.boundingBox, center=box.getCenter(new THREE.Vector3()), size=box.getSize(new THREE.Vector3()), radius=size.multiplyScalar(.5), geoms=labels.map(()=>new THREE.Geometry());
+      const step=4.0;
+      for(let x=center.x-radius.x;x<=center.x+radius.x;x+=step) for(let y=center.y-radius.y;y<=center.y+radius.y;y+=step) for(let z=center.z-radius.z;z<=center.z+radius.z;z+=step){
+        const nx=(x-center.x)/radius.x, ny=(y-center.y)/radius.y, nz=(z-center.z)/radius.z;
+        if(nx*nx+ny*ny+nz*nz>0.96) continue;
+        const p=new THREE.Vector3(x,y,z); let zone=0,d0=Infinity;
+        centers.forEach((c,i)=>{const d=p.distanceToSquared(c);if(d<d0){d0=d;zone=i}}); geoms[zone].vertices.push(p);
+      }
+      zoneMaterials=colors.map(c=>new THREE.PointsMaterial({color:c,size:4.5,transparent:true,opacity:.68,sizeAttenuation:true,depthTest:true,depthWrite:false}));
+      zones=new THREE.Group();geoms.forEach((g,i)=>{const cloud=new THREE.Points(g,zoneMaterials[i]);cloud.renderOrder=5;zones.add(cloud)});zones.visible=true;group.add(zones);
       document.getElementById('legend').innerHTML=labels.map((l,i)=>'<span class="segmentItem"><span class="swatch" style="background:#'+colors[i].toString(16).padStart(6,'0')+'"></span>'+l+'</span>').join('');
     }
     function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
     document.getElementById('showPortal').onchange=e=>portal.visible=e.target.checked; document.getElementById('showSurface').onchange=e=>surface.visible=e.target.checked; document.getElementById('showSegments').onchange=e=>zones.visible=e.target.checked;
     document.getElementById('surfaceOpacity').oninput=e=>{surfaceMaterial.opacity=+e.target.value;document.getElementById('surfaceOpacityValue').value=e.target.value}; document.getElementById('zoneOpacity').oninput=e=>{zoneMaterials.forEach(m=>m.opacity=+e.target.value);document.getElementById('zoneOpacityValue').value=e.target.value};
     document.getElementById('fit').onclick=fit; document.getElementById('wire').onclick=e=>{wire=!wire;surfaceMaterial.wireframe=wire;e.target.textContent=wire?'Solid surface':'Surface wireframe'};
-    Promise.all([load('../data/libzinc-json/portal15_1.json'),load('../data/libzinc-json/surface15_1.json')]).then(gs=>{const pg=gs[0],sg=gs[1];portal=new THREE.Mesh(pg,new THREE.MeshPhongMaterial({color:0x2878b5,side:THREE.DoubleSide,shininess:70}));portal.name='Portal vein';group.add(portal);surfaceMaterial=new THREE.MeshPhongMaterial({color:0xd9a441,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false});surface=new THREE.Mesh(sg,surfaceMaterial);surface.name='Liver surface';group.add(surface);buildZones(sg,pg);fit();document.getElementById('status').textContent='Eight portal-proximity zones loaded. Labels are exploratory Couinaud assignments.'}).catch(e=>{console.error(e);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP.'});
+    Promise.all([load('../data/libzinc-json/portal15_1.json'),load('../data/libzinc-json/surface15_1.json')]).then(gs=>{const pg=gs[0],sg=gs[1];pg.computeBoundingBox();sg.computeBoundingBox();portal=new THREE.Mesh(pg,new THREE.MeshPhongMaterial({color:0x2878b5,side:THREE.DoubleSide,shininess:70}));portal.name='Portal vein';group.add(portal);surfaceMaterial=new THREE.MeshPhongMaterial({color:0xd9a441,transparent:true,opacity:.06,side:THREE.DoubleSide,depthWrite:false});surface=new THREE.Mesh(sg,surfaceMaterial);surface.name='Liver surface reference';group.add(surface);buildZones(sg,pg);fit();document.getElementById('status').textContent='Independent 3D portal-territory field loaded. Liver surface is a faint reference only.'}).catch(e=>{console.error(e);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP.'});
     function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)})();
   </script>
 </body>
