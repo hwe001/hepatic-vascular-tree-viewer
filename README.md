@@ -10,6 +10,8 @@ Separate Three.js viewer for inspecting three hepatic blood-vessel trees, the bi
 
 The browser viewer is in `viewer/index.html`. It provides independent visibility and opacity controls for the liver surface and each vascular tree, together with rotation, right-drag panning, zooming, wireframe inspection, and a fit-view control.
 
+A dedicated portal-segmentation viewer is available at `segments/index.html` and online at https://hwe001.github.io/hepatic-vascular-tree-viewer/segments/. It shows only the portal vein, liver surface, and eight colored portal zones.
+
 It also includes an exploratory eight-zone portal-territory overlay. The overlay derives eight representative regions from the portal-vein mesh and assigns each liver-surface vertex to its nearest portal region. The displayed I-VIII labels are provisional Couinaud labels: the source JSON does not provide explicit portal branch annotations or radiological landmarks, so this overlay is intended for hypothesis generation and visualization, not clinical segmentation.
 
 ## Provenance and scope
