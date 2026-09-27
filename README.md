@@ -12,6 +12,8 @@ The browser viewer is in `viewer/index.html`. It provides independent visibility
 
 A dedicated portal-segmentation viewer is available at `segments/index.html` and online at https://hwe001.github.io/hepatic-vascular-tree-viewer/segments/. It shows only the portal vein, a faint liver-surface reference, and eight independently generated colored 3D portal-territory surfaces. The surfaces are reconstructed from a voxelized occupancy mask derived from the actual liver surface rather than painted onto the liver-surface triangles or forced into an ellipsoid.
 
+A CCO-output viewer is available at `cco/index.html`. It loads the JSON output of the separate `hwe001/liver-portal-cco` pipeline and displays the generated curved portal-tree centreline with the matched liver-surface reference. The public repository contains the viewer adapter and input/output documentation; the patient-specific generator and its required segment inputs remain in the separate private repository.
+
 
 It also includes an exploratory eight-zone portal-territory overlay. The overlay derives eight representative regions from the portal-vein mesh and assigns each liver-surface vertex to its nearest portal region. The displayed I-VIII labels are provisional Couinaud labels: the source JSON does not provide explicit portal branch annotations or radiological landmarks, so this overlay is intended for hypothesis generation and visualization, not clinical segmentation.
 
