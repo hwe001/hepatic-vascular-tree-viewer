@@ -81,7 +81,14 @@
     }
     function makeRadiusMesh(data,scaffold,material){const geo=new THREE.Geometry(),scale=+document.getElementById('radiusScale').value;const byId={};(data.nodes||[]).forEach(n=>byId[n.id]=n);allEdges(data).filter(e=>!!e.scaffold===scaffold&&!edgeRemoved(e)).forEach(e=>{const A=new THREE.Vector3(...byId[e.a].p),B=new THREE.Vector3(...byId[e.b].p),v=B.clone().sub(A),L=v.length();if(L<1e-6)return;const r=Math.max(0.06,(+e.radius||0.18)*scale);const g=new THREE.CylinderGeometry(r,r,L,6,1,false);const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),v.clone().normalize());const m=new THREE.Matrix4();m.makeRotationFromQuaternion(q);m.setPosition(A.clone().add(B).multiplyScalar(.5));geo.merge(g,m);});const mesh=new THREE.Mesh(geo,material);return mesh}
     function buildZones(data){if(zoneGroup)group.remove(zoneGroup);zoneGroup=new THREE.Group();const centers=[];data.zones.forEach((z,i)=>{const v=z.vertices, c=new THREE.Vector3();for(let j=0;j<v.length;j+=3)c.add(new THREE.Vector3(v[j],v[j+1],v[j+2]));centers.push(c.multiplyScalar(3/v.length));const g=new THREE.Geometry();for(let j=0;j<v.length;j+=3)g.vertices.push(new THREE.Vector3(v[j],v[j+1],v[j+2]));for(let j=0;j<z.faces.length;j+=3)g.faces.push(new THREE.Face3(z.faces[j],z.faces[j+1],z.faces[j+2]));g.computeVertexNormals();const m=new THREE.MeshPhongMaterial({color:[0xe41a1c,0xff7f00,0x4daf4a,0x377eb8,0x984ea3,0xa65628,0xf781bf,0x17becf][i],transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});const mesh=new THREE.Mesh(g,m);mesh.renderOrder=4;zoneGroup.add(mesh)});group.add(zoneGroup);zoneCenters=centers;return centers}
-    function assignZones(data,centers){nodeZone={};(data.nodes||[]).forEach(n=>{const p=new THREE.Vector3(...n.p),ds=centers.map(c=>p.distanceToSquared(c));nodeZone[n.id]=ds.indexOf(Math.min.apply(null,ds))+1})}
+    function assignZones(data,centers){
+      nodeZone={};const byId={},adj={};(data.nodes||[]).forEach(n=>{byId[n.id]=n;adj[n.id]=[]});
+      const nearest=p=>{const ds=centers.map(c=>p.distanceToSquared(c));return ds.indexOf(Math.min.apply(null,ds))+1};
+      (data.nodes||[]).filter(n=>n.scaffold).forEach(n=>{nodeZone[n.id]=nearest(new THREE.Vector3(...n.p))});
+      (data.edges||[]).forEach(e=>{if(adj[e.a]&&adj[e.b]){adj[e.a].push(e.b);adj[e.b].push(e.a)}});
+      const q=Object.keys(nodeZone).map(Number);for(let i=0;i<q.length;i++){const id=q[i];(adj[id]||[]).forEach(next=>{if(nodeZone[next]===undefined){nodeZone[next]=nodeZone[id];q.push(next)}})}
+      (data.nodes||[]).forEach(n=>{if(nodeZone[n.id]===undefined)nodeZone[n.id]=nearest(new THREE.Vector3(...n.p))});
+    }
     function showTree(data){currentData=data;buildContinuityEdges(data);rebuildRetainedTopology(data);if(treeGroup)group.remove(treeGroup);if(nodesGroup)group.remove(nodesGroup);treeGroup=new THREE.Group();nodesGroup=new THREE.Group();
       const scaffoldMaterial=new THREE.MeshPhongMaterial({color:0x243b72,transparent:true,opacity:.98});
       const generatedMaterial=new THREE.MeshPhongMaterial({color:0x2aa876,transparent:true,opacity:.9});
