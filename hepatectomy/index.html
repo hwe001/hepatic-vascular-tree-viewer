@@ -40,20 +40,22 @@
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,10000),controls=new THREE.OrbitControls(camera,renderer.domElement);
     controls.enableDamping=true;controls.enablePan=true;controls.screenSpacePanning=true;controls.mouseButtons={ORBIT:THREE.MOUSE.LEFT,ZOOM:THREE.MOUSE.MIDDLE,PAN:THREE.MOUSE.RIGHT};
     scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.6));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);
-    const group=new THREE.Group();scene.add(group);let treeGroup=null,nodesGroup=null,surface=null,surfaceMaterial=null,surfaceSource=null,zoneCenters=null,wire=false,currentData=null,zoneGroup=null,nodeZone={},visibleEdges=new Set(),visibleNodes=new Set(),retainedStats={nodes:0,edges:0};
+    const group=new THREE.Group();scene.add(group);let treeGroup=null,nodesGroup=null,surface=null,surfaceMaterial=null,surfaceSource=null,zoneCenters=null,wire=false,currentData=null,zoneGroup=null,nodeZone={},nodeById={},visibleEdges=new Set(),visibleNodes=new Set(),retainedStats={nodes:0,edges:0};
     const loader=new THREE.JSONLoader(),stlLoader=new THREE.STLLoader();
     function loadGeometry(url){return new Promise((resolve,reject)=>loader.load(url,g=>resolve(g),undefined,reject));}
     function loadSTL(url){return new Promise((resolve,reject)=>stlLoader.load(url,g=>resolve(g),undefined,reject));}
     function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
     function resected(){const s=document.getElementById('scenario').value;return s==='right'?[5,6,7,8]:s==='extended'?[4,5,6,7,8]:[]}
-    function edgeRemoved(e){return document.getElementById('hideResected').checked&&!visibleEdges.has(e)}
+    function pointInResectedSide(p){const plane=surfaceResectionPlane();return !!plane&&p.clone().sub(plane.point).dot(plane.normal)>0}
+    function edgeInResectedSide(e){const a=nodeById[e.a],b=nodeById[e.b];if(!a||!b)return false;const pa=new THREE.Vector3(...a.p),pb=new THREE.Vector3(...b.p),mid=pa.clone().add(pb).multiplyScalar(.5);return pointInResectedSide(pa)||pointInResectedSide(pb)||pointInResectedSide(mid)}
+    function edgeRemoved(e){return document.getElementById('hideResected').checked&&(!visibleEdges.has(e)||edgeInResectedSide(e))}
     function rebuildRetainedTopology(data){
       visibleEdges=new Set();visibleNodes=new Set();
-      const hide=document.getElementById('hideResected').checked,cut=new Set(resected()),byId={},adj={};
-      (data.nodes||[]).forEach(n=>{byId[n.id]=n;adj[n.id]=[]});
-      const blocked=id=>hide&&cut.has(nodeZone[id]);
+      const hide=document.getElementById('hideResected').checked,cut=new Set(resected()),byId={},adj={};nodeById={};
+      (data.nodes||[]).forEach(n=>{byId[n.id]=n;nodeById[n.id]=n;adj[n.id]=[]});
+      const blocked=id=>hide&&(cut.has(nodeZone[id])||pointInResectedSide(new THREE.Vector3(...byId[id].p)));
       (data.edges||[]).forEach(e=>{
-        if(blocked(e.a)||blocked(e.b))return;
+        if(blocked(e.a)||blocked(e.b)||edgeInResectedSide(e))return;
         adj[e.a].push([e.b,e]);adj[e.b].push([e.a,e]);
       });
       if(!hide){(data.nodes||[]).forEach(n=>visibleNodes.add(n.id));(data.edges||[]).forEach(e=>visibleEdges.add(e));retainedStats={nodes:visibleNodes.size,edges:visibleEdges.size};return}
@@ -64,7 +66,7 @@
       (data.nodes||[]).filter(n=>n.scaffold&&!blocked(n.id)).forEach(n=>{visibleNodes.add(n.id);queue.push(n.id)});
       if(!queue.length)(data.nodes||[]).filter(n=>!blocked(n.id)).slice(0,1).forEach(n=>{visibleNodes.add(n.id);queue.push(n.id)});
       while(queue.length){const id=queue.shift();(adj[id]||[]).forEach(pair=>{const next=pair[0],e=pair[1];if(visibleEdges.has(e))return;visibleEdges.add(e);if(!visibleNodes.has(next)){visibleNodes.add(next);queue.push(next)}})}
-      retainedStats={nodes:visibleNodes.size,edges:visibleEdges.size};
+      retainedStats={nodes:visibleNodes.size,edges:Array.from(visibleEdges).filter(e=>!edgeInResectedSide(e)).length};
     }
     function makeRadiusMesh(data,scaffold,material){const geo=new THREE.Geometry(),scale=+document.getElementById('radiusScale').value;const byId={};(data.nodes||[]).forEach(n=>byId[n.id]=n);(data.edges||[]).filter(e=>!!e.scaffold===scaffold&&!edgeRemoved(e)).forEach(e=>{const A=new THREE.Vector3(...byId[e.a].p),B=new THREE.Vector3(...byId[e.b].p),v=B.clone().sub(A),L=v.length();if(L<1e-6)return;const r=Math.max(0.06,(+e.radius||0.18)*scale);const g=new THREE.CylinderGeometry(r,r,L,6,1,false);const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),v.clone().normalize());const m=new THREE.Matrix4();m.makeRotationFromQuaternion(q);m.setPosition(A.clone().add(B).multiplyScalar(.5));geo.merge(g,m);});const mesh=new THREE.Mesh(geo,material);return mesh}
     function buildZones(data){if(zoneGroup)group.remove(zoneGroup);zoneGroup=new THREE.Group();const centers=[];data.zones.forEach((z,i)=>{const v=z.vertices, c=new THREE.Vector3();for(let j=0;j<v.length;j+=3)c.add(new THREE.Vector3(v[j],v[j+1],v[j+2]));centers.push(c.multiplyScalar(3/v.length));const g=new THREE.Geometry();for(let j=0;j<v.length;j+=3)g.vertices.push(new THREE.Vector3(v[j],v[j+1],v[j+2]));for(let j=0;j<z.faces.length;j+=3)g.faces.push(new THREE.Face3(z.faces[j],z.faces[j+1],z.faces[j+2]));g.computeVertexNormals();const m=new THREE.MeshPhongMaterial({color:[0xe41a1c,0xff7f00,0x4daf4a,0x377eb8,0x984ea3,0xa65628,0xf781bf,0x17becf][i],transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});const mesh=new THREE.Mesh(g,m);mesh.renderOrder=4;zoneGroup.add(mesh)});group.add(zoneGroup);zoneCenters=centers;return centers}
