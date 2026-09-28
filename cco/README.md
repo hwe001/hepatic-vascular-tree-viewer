@@ -6,6 +6,14 @@ The bundled result is grown from the public `portal15_1.json` asset: 8,254 nodes
 
 The generator is not copied into this public repository because it is maintained separately and expects patient-specific inputs that are not public here. The private pipeline uses territory-partitioned growth, coverage-driven adaptive growth, Murray-law radius scaling, clearance checks, concave-boundary repair, long-tail densification, and a forward pressure/flow solve.
 
+The repository also contains provisional scaffold-anchored CCO-style completions for the matched hepatic artery (`data/cco_arterial15_provisional.json`) and hepatic veins (`data/cco_hepatic_vein15_provisional.json`). These are geometry prototypes generated from the corresponding arterial/hepatic-vein meshes inside the matched liver surface. The arterial output is treated as outward inflow growth; the hepatic-vein output is a provisional convergent drainage geometry whose outlet annotation and haemodynamic calibration remain to be completed. Neither output should yet be interpreted as a validated physiological simulation.
+
+## Volume-filling comparison viewer
+
+`cco-volume/index.html` loads `cco/data/cco_post_s2_volume_filling.json`, a separate CCO-inspired comparison result. It uses one connected global tree grown from the observed portal root, uniform interior perfusion targets, coverage-driven gap filling, and no forced surface-terminal shell. This is the current morphology experiment intended to reduce radial spokes and improve volume filling. The original surface-anchored result remains available at `cco/index.html` for side-by-side comparison.
+
+The deep-learning/LFDO-CCO repository at [`pqpqpqpqpq/Generation`](https://github.com/pqpqpqpqpq/Generation) is a useful future extension for learning local bifurcation statistics from data. It is not used to claim a trained model for this subject-specific tree.
+
 ## Use
 
 1. Run the private CCO pipeline with its `portal_post.json` and segment STL inputs.
