@@ -24,9 +24,9 @@
     <label><input id="showArterial" type="checkbox" checked> <span class="swatch" style="background:#d73027"></span>Hepatic artery</label>
     <label><input id="showPortal" type="checkbox" checked> <span class="swatch" style="background:#2878b5"></span>Portal vein</label>
     <label><input id="showHepatic" type="checkbox" checked> <span class="swatch" style="background:#8e44ad"></span>Hepatic vein</label>
-    <label><input id="showBiliary" type="checkbox" checked> <span class="swatch" style="background:#008c95"></span>Biliary tree</label>
+    <label><input id="showBiliary" type="checkbox" checked> <span class="swatch" style="background:#20a64a"></span>Biliary tree</label>
     <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface</label>
-    <label><input id="showSegments" type="checkbox" checked> Portal zones / Couinaud segments (exploratory)</label>
+    <label><input id="showSegments" type="checkbox"> Portal zones / Couinaud segments (exploratory)</label>
     <label>Surface opacity <input id="opacity" type="range" min="0.05" max="0.8" step="0.05" value="0.18"> <output id="opacityValue">0.18</output></label>
     <label>Segment opacity <input id="segmentOpacity" type="range" min="0.15" max="0.8" step="0.05" value="0.45"> <output id="segmentOpacityValue">0.45</output></label>
     <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
@@ -58,7 +58,7 @@
       ['arterial', 'Hepatic artery', '../data/libzinc-json/arterial15_1.json', 0xd73027],
       ['portal', 'Portal vein', '../data/libzinc-json/portal15_1.json', 0x2878b5],
       ['hepatic', 'Hepatic vein', '../data/libzinc-json/hepatic15_1.json', 0x8e44ad],
-      ['biliary', 'Biliary tree', '../data/libzinc-json/bile15_1.json', 0x008c95]
+      ['biliary', 'Biliary tree', '../data/libzinc-json/bile15_1.json', 0x20a64a]
     ];
     function loadAsset(url, kind, label, color) {
       return new Promise((resolve, reject) => loader.load(url, geometry => {
@@ -103,7 +103,10 @@
       segmentMaterials = segmentColors.map(color => new THREE.MeshBasicMaterial({color, transparent:true, opacity:.65, side:THREE.DoubleSide, depthTest:false, depthWrite:false}));
       segmentOverlay = new THREE.Group(); segmentOverlay.name = 'Portal perfusion zones (exploratory Couinaud labels)'; segmentOverlay.renderOrder = 10;
       zoneGeometries.forEach((geometry, i) => { const mesh = new THREE.Mesh(geometry, segmentMaterials[i]); mesh.renderOrder = 10; segmentOverlay.add(mesh); });
-      segmentOverlay.visible = document.getElementById('showSegments').checked; group.add(segmentOverlay);
+      document.getElementById('showSegments').checked = false;
+      segmentOverlay.visible = false;
+      document.getElementById('segmentLegend').style.display = 'none';
+      group.add(segmentOverlay);
       segmentBuilt = true;
       const legend = document.getElementById('segmentLegend'); legend.innerHTML = segmentLabels.map((label, i) => '<span class="segmentItem"><span class="swatch" style="background:#' + segmentColors[i].toString(16).padStart(6,'0') + '"></span>' + label + '</span>').join(''); legend.style.display = segmentOverlay.visible ? 'block' : 'none';
     }
@@ -125,7 +128,7 @@
     document.getElementById('segmentOpacity').oninput = e => { segmentMaterials.forEach(m=>m.opacity=+e.target.value); document.getElementById('segmentOpacityValue').value=e.target.value; };
     document.getElementById('fit').onclick=fitView;
     document.getElementById('wire').onclick=e => { wireframe=!wireframe; surfaceMaterial.wireframe=wireframe; e.target.textContent=wireframe?'Solid surface':'Surface wireframe'; };
-    Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3]))).then(gs=>loadSurface(vessels.portal.geometry)).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded four matched trees and liver surface. Eight portal zones are visible; use the checkbox to hide them.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
+      Promise.all(assets.map(a=>loadAsset(a[2],a[0],a[1],a[3]))).then(gs=>loadSurface(vessels.portal.geometry)).then(gs=>{fitView(); document.getElementById('status').textContent='Loaded four matched trees and an unzoned liver surface. Exploratory portal zones are available only when enabled.';}).catch(err=>{console.error(err);document.getElementById('status').textContent='Load failed. Serve the repository over HTTP so the JSON assets can be fetched.';});
     addEventListener('resize',resize); resize();
     (function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
   </script>
