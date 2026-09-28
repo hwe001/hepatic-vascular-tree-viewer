@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CCO portal-tree viewer</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,sans-serif;background:#f7f8fa}
+    #view{width:100%;height:100%;display:block}
+    #panel{position:fixed;top:14px;left:14px;z-index:2;width:310px;padding:14px 16px;color:#17202a;background:rgba(255,255,255,.96);border:1px solid #d6dbe1;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+    h1{font-size:16px;margin:0 0 10px}label{display:block;margin:8px 0;font-size:13px}input[type=range]{width:115px;vertical-align:middle}button{margin:5px 5px 0 0;padding:6px 9px;border:1px solid #c5ccd4;border-radius:6px;background:white;cursor:pointer}#hint,#status,#meta{margin-top:8px;font-size:11px;color:#68727c;line-height:1.35}.swatch{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <h1>Coverage-driven CCO portal-tree viewer</h1>
+    <input id="file" type="file" accept=".json,application/json">
+    <label><input id="showSurface" type="checkbox" checked> <span class="swatch" style="background:#d9a441"></span>Liver surface reference</label>
+    <label><input id="showNodes" type="checkbox"> Show nodes</label>
+    <label>Tree opacity <input id="treeOpacity" type="range" min="0.25" max="1" step="0.05" value="0.95"> <output id="treeOpacityValue">0.95</output></label>
+    <button id="fit">Fit view</button><button id="wire">Surface wireframe</button>
+    <div id="meta">Load a generated <code>cco_post_s*.json</code> file from the private CCO pipeline.</div>
+    <div id="hint">Rotate: left-drag · Pan: right-drag · Zoom: wheel/middle-drag</div>
+    <div id="status">Loading the portal15-seeded CCO tree...</div>
+  </div>
+  <canvas id="view"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/loaders/JSONLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/loaders/STLLoader.js"></script>
+  <script>
+    const canvas=document.getElementById('view'),renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xf7f8fa,1);
+    const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,10000),controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;controls.enablePan=true;controls.screenSpacePanning=true;controls.mouseButtons={ORBIT:THREE.MOUSE.LEFT,ZOOM:THREE.MOUSE.MIDDLE,PAN:THREE.MOUSE.RIGHT};
+    scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.6));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);
+    const group=new THREE.Group();scene.add(group);let treeGroup=null,nodesGroup=null,surface=null,surfaceMaterial=null,wire=false;
+    const loader=new THREE.JSONLoader(),stlLoader=new THREE.STLLoader();
+    function loadGeometry(url){return new Promise((resolve,reject)=>loader.load(url,g=>resolve(g),undefined,reject));}
+    function loadSTL(url){return new Promise((resolve,reject)=>stlLoader.load(url,g=>resolve(g),undefined,reject));}
+    function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
+    function showTree(data){if(treeGroup)group.remove(treeGroup);if(nodesGroup)group.remove(nodesGroup);treeGroup=new THREE.Group();nodesGroup=new THREE.Group();
+      const material=new THREE.LineBasicMaterial({color:0x2878b5,transparent:true,opacity:.95});
+      const lineGeometry=new THREE.Geometry();
+      (data.edges||[]).forEach(edge=>{const pts=(edge.curve||[data.nodes.find(n=>n.id===edge.a).p,data.nodes.find(n=>n.id===edge.b).p]).map(p=>new THREE.Vector3(p[0],p[1],p[2]));for(let i=0;i<pts.length-1;i++){lineGeometry.vertices.push(pts[i],pts[i+1]);}});
+      treeGroup.add(new THREE.Line(lineGeometry,material,THREE.LinePieces));
+      if(document.getElementById('showNodes').checked){const nodeGeometry=new THREE.Geometry();(data.nodes||[]).forEach(n=>nodeGeometry.vertices.push(new THREE.Vector3(n.p[0],n.p[1],n.p[2])));nodesGroup.add(new THREE.Points(nodeGeometry,new THREE.PointsMaterial({color:0xe67e22,size:1.2,sizeAttenuation:true})))}
+      group.add(treeGroup);group.add(nodesGroup);nodesGroup.visible=document.getElementById('showNodes').checked;document.getElementById('treeOpacity').oninput=e=>{material.opacity=+e.target.value;document.getElementById('treeOpacityValue').value=e.target.value};
+      const s=data.summary||{},a=data.assumptions||{};document.getElementById('meta').innerHTML=`<b>${data.label||data.id||'CCO tree'}</b><br>Nodes: ${(data.nodes||[]).length} · Edges: ${(data.edges||[]).length}<br>Terminals: ${a.terminalCountFinal??'n/a'} · Flow: ${s.totalFlowMlMin??'n/a'} mL/min · Generations: ${s.maxTerminalGeneration??'n/a'}`;
+      document.getElementById('status').textContent='Loaded CCO output. Geometry is generated by the coverage-driven, containment-constrained pipeline.';fit();
+    }
+    document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{showTree(JSON.parse(r.result))}catch(err){document.getElementById('status').textContent='Could not parse this JSON file.'}};r.readAsText(f)};
+    document.getElementById('showNodes').onchange=e=>{if(nodesGroup)nodesGroup.visible=e.target.checked};document.getElementById('showSurface').onchange=e=>{if(surface)surface.visible=e.target.checked};document.getElementById('fit').onclick=fit;document.getElementById('wire').onclick=e=>{wire=!wire;if(surfaceMaterial)surfaceMaterial.wireframe=wire;e.target.textContent=wire?'Solid surface':'Surface wireframe'};
+    function addSurface(g){g.computeBoundingBox();surfaceMaterial=new THREE.MeshPhongMaterial({color:0xd9a441,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false});surface=new THREE.Mesh(g,surfaceMaterial);group.add(surface);fit()}
+    loadSTL('../cco/data/S2.stl?v=local-anchored-1').then(addSurface).catch(()=>loadGeometry('../data/libzinc-json/surface15_1.json').then(addSurface).catch(()=>{}));
+    fetch('../cco/data/cco_post_s2.json?v=local-anchored-1').then(r=>{if(!r.ok)throw new Error('bundled output unavailable');return r.json()}).then(showTree).catch(()=>{document.getElementById('status').textContent='Could not load the bundled tree. Choose a cco_post_s*.json file above.'});
+    function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)})();
+  </script>
+</body>
+</html>
