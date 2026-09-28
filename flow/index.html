@@ -20,7 +20,7 @@
 <body>
   <div id="panel">
     <h1>Integrated hepatic PV-HA-HV flow simulation</h1>
-    <div class="note">A three-tree scenario viewer with a shared 0D-style controller. PV, HA, and HV values change together; the controller is HABR-informed and illustrative, not a validated subject-specific clinical prediction.</div>
+    <div class="note">A three-tree scenario viewer with a shared 0D-style controller. PV, HA, and HV values change together; the controller is HABR-informed and illustrative, not a validated subject-specific clinical prediction. Default PV is 800 mL/min; use 600–900 mL/min for fasting sensitivity and about 1050 mL/min for a postprandial stress case.</div>
     <h2>Integrated scenario</h2>
     <div class="controller">
       <label><input id="coupledMode" type="checkbox" checked> Use shared PV-HA-HV controller</label>
@@ -32,16 +32,16 @@
     </div>
     <div class="metrics"><div class="metric"><span class="swatch" style="background:#1769aa"></span>PV<b id="metricPV">-</b></div><div class="metric"><span class="swatch" style="background:#d35400"></span>HA<b id="metricHA">-</b></div><div class="metric"><span class="swatch" style="background:#6c3483"></span>HV<b id="metricHV">-</b></div></div>
     <h2>Scenario anchors (mL/min)</h2>
-    <label>Intact PV <input id="basePV" type="number" min="0" step="1" value="1059"></label>
+    <label>Intact PV <input id="basePV" type="number" min="0" step="1" value="800"></label>
     <label>Intact HA <input id="baseHA" type="number" min="0" step="1" value="401"></label>
-    <label>Remnant PV <input id="remnantPV" type="number" min="0" step="1" value="1060"></label>
+    <label>Remnant PV <input id="remnantPV" type="number" min="0" step="1" value="800"></label>
     <label>Remnant HA <input id="remnantHA" type="number" min="0" step="1" value="50"></label>
     <h2>Vessel layers</h2>
     <label><input id="showPV" type="checkbox" checked> <span class="swatch" style="background:#1769aa"></span>Portal vein CCO</label>
     <label><input id="showHA" type="checkbox" checked> <span class="swatch" style="background:#d35400"></span>Hepatic artery CCO</label>
     <label><input id="showHV" type="checkbox" checked> <span class="swatch" style="background:#6c3483"></span>Hepatic vein CCO</label>
     <h2>Manual override</h2>
-    <label>PV flow <input id="pvFlow" type="range" min="0" max="1400" step="10" value="1059"> <span id="pvFlowValue" class="value">1059 mL/min</span></label>
+    <label>PV flow <input id="pvFlow" type="range" min="0" max="1400" step="10" value="800"> <span id="pvFlowValue" class="value">800 mL/min</span></label>
     <label>HA flow <input id="haFlow" type="range" min="0" max="700" step="5" value="401"> <span id="haFlowValue" class="value">401 mL/min</span></label>
     <label>HV outflow <input id="hvFlow" type="range" min="0" max="1800" step="10" value="1460"> <span id="hvFlowValue" class="value">1460 mL/min</span></label>
     <label><input id="conserveHV" type="checkbox" checked> Set HV = PV + HA</label>
@@ -66,7 +66,7 @@
     scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.5));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);const group=new THREE.Group();scene.add(group);
     const trees={},treeGroups={},surfaceState={mesh:null,source:null},zoneCenters=[];let wire=false,animating=false,lastAnimation=0;
     const colors={pv:0x1769aa,ha:0xd35400,hv:0x6c3483};
-    const simState={pv:1059,ha:401,hv:1460,alpha:0};
+    const simState={pv:800,ha:401,hv:1201,alpha:0};
     const el=id=>document.getElementById(id),num=id=>Math.max(0,Number(el(id).value)||0);
     function resected(){return el('scenario').value==='right'?[5,6,7,8]:[]}
     function plane(){if(!resected().length||!zoneCenters.length)return null;const keep=zoneCenters.filter((c,i)=>i<4),remove=zoneCenters.filter((c,i)=>i>=4);if(!keep.length||!remove.length)return null;const a=new THREE.Vector3(),b=new THREE.Vector3();keep.forEach(c=>a.add(c));remove.forEach(c=>b.add(c));a.multiplyScalar(1/keep.length);b.multiplyScalar(1/remove.length);return{point:a.add(b).multiplyScalar(.5),normal:b.sub(a).normalize()}}
