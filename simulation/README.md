@@ -61,10 +61,11 @@ explicit prototype assumptions in `Parameters` and are written into the JSON
 result. The result is a reproducible mechanics layer, not yet a
 patient-calibrated arterial solution.
 
-The current provisional HA asset contains six disconnected root components.
-The solver selects the largest component (currently root node 6, 641
-segments) and records the remaining components in the result metadata rather
-than silently joining them.
+The original provisional HA asset contained six disconnected root components.
+`simulation/repair_ha_topology.py` creates a separate repaired asset with one
+root (node 6), preserving the original segments and adding five explicitly
+marked proximal connectors. Connector lengths and source component roots are
+recorded in the repaired JSON metadata; the original asset is not modified.
 
 Run it from the repository root:
 

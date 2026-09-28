@@ -173,7 +173,7 @@ def solve(data: dict, params: Parameters) -> dict:
         "model": "linearized_1d_frequency_domain_transmission_line",
         "root_id": root,
         "root_candidates": roots,
-        "topology_note": "The provisional HA asset has disconnected rooted components; this result solves the largest component and does not silently connect the others.",
+        "topology_note": "The repaired HA asset has one explicit root; five proximal connectors are synthetic and recorded in the geometry metadata.",
         "parameters": {key: getattr(params, key) for key in params.__dataclass_fields__},
         "root_mean_flow_ml_min": params.root_mean_ml_min,
         "root_pulsatile_amplitude_ml_min": params.root_mean_ml_min * params.root_pulsatility,
@@ -189,7 +189,7 @@ def solve(data: dict, params: Parameters) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_provisional.json"))
+    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_repaired.json"))
     parser.add_argument("--output", type=Path, default=Path("simulation/ha_transmission_line_result.json"))
     args = parser.parse_args()
     data = json.loads(args.geometry.read_text(encoding="utf-8"))
