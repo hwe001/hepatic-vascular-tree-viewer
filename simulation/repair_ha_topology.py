@@ -42,20 +42,28 @@ def main():
     data = json.loads(SOURCE.read_text(encoding="utf-8"))
     by_id = {int(node["id"]): node for node in data["nodes"]}
     roots, comps, outgoing = components(data)
-    main_root = max(roots, key=lambda root: len(comps[root]))
-    main_nodes = comps[main_root]
+    # Node 0 is the anatomical inlet: it has the largest proximal radius and
+    # the short proximal trunk, whereas node 6 is a downstream component.
+    main_root = 0
+    connected_nodes = set(comps[main_root])
+    pending_roots = set(roots) - {main_root}
     connectors = []
 
-    for root in roots:
-        if root == main_root:
-            continue
+    while pending_roots:
+        root = min(
+            pending_roots,
+            key=lambda candidate: min(
+                math.dist(by_id[a]["p"], by_id[candidate]["p"])
+                for a in connected_nodes
+            ),
+        )
         distance, main_node, component_node = min(
             (
                 math.dist(by_id[a]["p"], by_id[root]["p"]),
                 a,
                 root,
             )
-            for a in main_nodes
+            for a in connected_nodes
         )
         first_edges = outgoing.get(root, [])
         if not first_edges:
@@ -75,6 +83,8 @@ def main():
             "sourceComponentRoot": root,
             "connectionDistanceMm": distance,
         })
+        connected_nodes.update(comps[root])
+        pending_roots.remove(root)
 
     repaired = dict(data)
     repaired["id"] = "cco_arterial15_repaired"

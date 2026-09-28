@@ -26,14 +26,14 @@
       34,
       38
     ],
-    "primaryRoot": 6,
+    "primaryRoot": 0,
     "syntheticConnectorCount": 5,
     "syntheticConnectorDistancesMm": [
-      15.70521976246582,
-      4.478042519678434,
+      0.159881441258806,
+      0.1615385257231706,
       0.0815892197507375,
-      24.416233889116402,
-      15.625804817404868
+      0.030769852546998492,
+      0.07058635230637324
     ],
     "originalAssetPreserved": true
   },
@@ -85,7 +85,7 @@
         144.56936646153846,
         99.47877638461537
       ],
-      "terminal": true,
+      "terminal": false,
       "scaffold": true
     },
     {
@@ -105,7 +105,7 @@
         143.73100284615387,
         102.9663086153846
       ],
-      "terminal": true,
+      "terminal": false,
       "scaffold": true
     },
     {
@@ -385,7 +385,7 @@
         132.99634723076926,
         119.54214446153847
       ],
-      "terminal": true,
+      "terminal": false,
       "scaffold": true
     },
     {
@@ -425,7 +425,7 @@
         130.23448876923075,
         111.4817469230769
       ],
-      "terminal": true,
+      "terminal": false,
       "scaffold": true
     },
     {
@@ -12305,7 +12305,7 @@
         106.41419917469295,
         109.26336827911062
       ],
-      "terminal": false,
+      "terminal": true,
       "scaffold": false
     },
     {
@@ -55461,41 +55461,17 @@
       "scaffold": false
     },
     {
-      "a": 1225,
-      "b": 0,
-      "length": 15.70521976246582,
-      "radius": 1.6176033385480426,
-      "resistance": 0.0,
-      "flow": 0.0,
-      "curve": [
-        [
-          -158.6878477875175,
-          106.41419917469295,
-          109.26336827911062
-        ],
-        [
-          -154.67877430769232,
-          116.0318016923077,
-          97.51249684615384
-        ]
-      ],
-      "scaffold": false,
-      "syntheticConnector": true,
-      "sourceComponentRoot": 0,
-      "connectionDistanceMm": 15.70521976246582
-    },
-    {
-      "a": 6,
+      "a": 3,
       "b": 4,
-      "length": 4.478042519678434,
+      "length": 0.159881441258806,
       "radius": 1.119879219943347,
       "resistance": 0.0,
       "flow": 0.0,
       "curve": [
         [
-          -126.66305192307694,
-          143.73100284615384,
-          103.03349307692307
+          -129.22957446153848,
+          144.56936646153846,
+          99.47877638461537
         ],
         [
           -129.34080984615386,
@@ -55506,7 +55482,31 @@
       "scaffold": false,
       "syntheticConnector": true,
       "sourceComponentRoot": 4,
-      "connectionDistanceMm": 4.478042519678434
+      "connectionDistanceMm": 0.159881441258806
+    },
+    {
+      "a": 5,
+      "b": 6,
+      "length": 0.1615385257231706,
+      "radius": 0.9083450705494114,
+      "resistance": 0.0,
+      "flow": 0.0,
+      "curve": [
+        [
+          -126.51614738461538,
+          143.73100284615387,
+          102.9663086153846
+        ],
+        [
+          -126.66305192307694,
+          143.73100284615384,
+          103.03349307692307
+        ]
+      ],
+      "scaffold": false,
+      "syntheticConnector": true,
+      "sourceComponentRoot": 6,
+      "connectionDistanceMm": 0.1615385257231706
     },
     {
       "a": 29,
@@ -55533,17 +55533,17 @@
       "connectionDistanceMm": 0.0815892197507375
     },
     {
-      "a": 29,
+      "a": 33,
       "b": 34,
-      "length": 24.416233889116402,
+      "length": 0.030769852546998492,
       "radius": 0.2986352715102853,
       "resistance": 0.0,
       "flow": 0.0,
       "curve": [
         [
-          -101.67474484615386,
-          138.39324015384616,
-          102.99321684615386
+          -84.52467930769231,
+          132.99634723076926,
+          119.54214446153847
         ],
         [
           -84.53164323076922,
@@ -55554,20 +55554,20 @@
       "scaffold": false,
       "syntheticConnector": true,
       "sourceComponentRoot": 34,
-      "connectionDistanceMm": 24.416233889116402
+      "connectionDistanceMm": 0.030769852546998492
     },
     {
-      "a": 29,
+      "a": 37,
       "b": 38,
-      "length": 15.625804817404868,
+      "length": 0.07058635230637324,
       "radius": 0.4355084655973775,
       "resistance": 0.0,
       "flow": 0.0,
       "curve": [
         [
-          -101.67474484615386,
-          138.39324015384616,
-          102.99321684615386
+          -91.34638915384616,
+          130.23448876923075,
+          111.4817469230769
         ],
         [
           -91.32897184615385,
@@ -55578,8 +55578,8 @@
       "scaffold": false,
       "syntheticConnector": true,
       "sourceComponentRoot": 38,
-      "connectionDistanceMm": 15.625804817404868
+      "connectionDistanceMm": 0.07058635230637324
     }
   ],
-  "rootId": 6
+  "rootId": 0
 }
