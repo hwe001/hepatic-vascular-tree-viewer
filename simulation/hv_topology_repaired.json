@@ -1,0 +1,12 @@
+{
+  "model": "provisional three-hepatic-vein-to-IVC topology",
+  "outlet": "IVC",
+  "ivc_path_edges": [[58, 0], [0, 59], [59, 1331]],
+  "junctions": [
+    {"name": "Left hepatic vein", "edge": [0, 1], "color": "#7b1fa2"},
+    {"name": "Middle hepatic vein", "edge": [0, 10], "color": "#00897b"},
+    {"name": "Right hepatic vein", "edge": [0, 255], "color": "#ef6c00"}
+  ],
+  "flow_direction": "left, middle and right hepatic veins drain toward the IVC; the IVC continues along the high-radius scaffold path",
+  "status": "Provisional topology assignment from the measured scaffold; distal CCO completion remains subject to anatomical validation"
+}
