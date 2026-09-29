@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hepatic-arterial WSS before and after hepatectomy</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#f7f8fa;font-family:system-ui,sans-serif;color:#17202a}
+    #view{width:100%;height:100%;display:block}#panel{position:fixed;top:14px;left:14px;z-index:2;width:330px;padding:14px 16px;background:rgba(255,255,255,.96);border:1px solid #d6dbe1;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+    h1{font-size:17px;margin:0 0 8px}label{display:block;margin:8px 0;font-size:13px}select{width:100%;padding:6px}.note,#status,#summary{margin-top:8px;font-size:11px;color:#68727c;line-height:1.4}.bar{height:12px;border-radius:4px;background:linear-gradient(90deg,#1646d8,#00b9df,#16b85a,#ffd000,#e82222);margin:5px 0}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.metric{padding:7px 4px;border-radius:6px;background:#f0f3f6;text-align:center;font-size:11px}.metric b{display:block;font-size:14px;color:#17202a}
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <h1>Hepatic-arterial WSS comparison</h1>
+    <div class="note">Reduced-order Poiseuille WSS on the Murray-regularised HA tree. WSS is a geometry-aware screening output, not a 3-D CFD measurement.</div>
+    <label>Scenario<select id="scenario"><option value="intact_pre_hepatectomy">Intact, pre-hepatectomy</option><option value="remnant_post_hepatectomy_no_HABR">Remnant, post-hepatectomy without HABR</option><option value="remnant_post_hepatectomy_with_HABR">Remnant, post-hepatectomy with HABR</option></select></label>
+    <div class="bar"></div><div style="font-size:10px"><span>low WSS</span><span style="float:right">high WSS</span></div>
+    <div class="metrics"><div class="metric">Mean WSS<b id="median">-</b></div><div class="metric">95th percentile<b id="p95">-</b></div><div class="metric">Maximum<b id="max">-</b></div><div class="metric">Root flow<b id="flow">-</b></div></div>
+    <div id="summary">Loading WSS report...</div><div id="status">Loading geometry...</div>
+    <div class="note">Rotate: left-drag · Pan: right-drag · Zoom: wheel/middle-drag</div>
+  </div>
+  <canvas id="view"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    const canvas=document.getElementById('view'),renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.setClearColor(0xf7f8fa,1);
+    const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.01,10000),controls=new THREE.OrbitControls(camera,canvas);controls.enableDamping=true;controls.screenSpacePanning=true;scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.5));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);const group=new THREE.Group();scene.add(group);
+    const el=id=>document.getElementById(id);let geometry=null,report=null,meshGroup=null;
+    function colour(v,min,max){const t=Math.max(0,Math.min(1,(v-min)/Math.max(1e-9,max-min))),s=[0x1646d8,0x00b9df,0x16b85a,0xffd000,0xe82222],x=t*(s.length-1),i=Math.min(s.length-2,Math.floor(x));return new THREE.Color(s[i]).lerp(new THREE.Color(s[i+1]),x-i)}
+    function render(){if(!geometry||!report)return;if(meshGroup)group.remove(meshGroup);meshGroup=new THREE.Group();const name=el('scenario').value,rows=report.edges.filter(x=>x.scenario===name),values=rows.map(x=>x.mean_wss_pa),lo=0,hi=Math.max(...values);const byEdge={};rows.forEach(x=>byEdge[x.a+'-'+x.b]=x);(geometry.edges||[]).forEach(e=>{const row=byEdge[e.a+'-'+e.b];if(!row)return;const a=geometry.nodes.find(n=>n.id===e.a),b=geometry.nodes.find(n=>n.id===e.b);if(!a||!b)return;const A=new THREE.Vector3(...a.p),B=new THREE.Vector3(...b.p),v=B.clone().sub(A),L=v.length();if(L<1e-6)return;const r=Math.max(.05,(+e.radius||.18)*3),g=new THREE.CylinderGeometry(r,r,L,7,1,false),m=new THREE.Mesh(g,new THREE.MeshPhongMaterial({color:colour(row.mean_wss_pa,lo,hi),transparent:true,opacity:.95,side:THREE.DoubleSide}));m.position.copy(A.clone().add(B).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());meshGroup.add(m)});group.add(meshGroup);const s=report.scenarios[name],st=s.mean_wss_pa;el('median').textContent=st.median.toFixed(2)+' Pa';el('p95').textContent=st.p95.toFixed(2)+' Pa';el('max').textContent=st.max.toFixed(2)+' Pa';el('flow').textContent=s.mean_flow_ml_min.max.toFixed(1)+' mL/min';el('summary').innerHTML='Edges: '+s.edge_count+' · mean WSS '+st.mean.toFixed(2)+' Pa<br>Mean WSS is reported with μ = '+report.assumptions.dynamic_viscosity_pa_s+' Pa·s. The post-HABR case uses an illustrative 150 mL/min HA root flow.';fit()}
+    function fit(){const box=new THREE.Box3();(geometry.nodes||[]).forEach(n=>box.expandByPoint(new THREE.Vector3(...n.p)));const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(center).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(center);controls.update()}
+    el('scenario').onchange=render;Promise.all([fetch('../cco/data/cco_arterial15_repaired_murray.json?v=wss-murray-1').then(r=>r.json()),fetch('../simulation/ha_habr_wss_comparison.json?v=wss-report-1').then(r=>r.json())]).then(([g,r])=>{geometry=g;report=r;el('status').textContent='Loaded Murray-regularised HA geometry and WSS report.';render()}).catch(e=>{el('status').textContent='Could not load the WSS report or HA geometry.';console.error(e)});addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)})();
+  </script>
+</body>
+</html>

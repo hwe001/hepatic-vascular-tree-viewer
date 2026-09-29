@@ -52,7 +52,8 @@ is used as the paper's quantitative result.
 ## Hepatic-artery transmission line
 
 `ha_transmission_line.py` provides a linearized frequency-domain 1-D
-transmission-line solve on `cco/data/cco_arterial15_provisional.json`. It
+transmission-line solve on the Murray-regularised
+`cco/data/cco_arterial15_repaired_murray.json` asset. It
 propagates a zero-mean harmonic perturbation around a root mean flow of
 250 mL/min and reports segment flow amplitude, phase, pressure amplitude, and
 downstream flow amplitude. Segment length and radius come from the geometry;
@@ -72,3 +73,21 @@ Run it from the repository root:
 ```powershell
 python simulation/ha_transmission_line.py
 ```
+
+## HA HABR and WSS comparison
+
+`ha_habr_wss_comparison.py` compares the intact HA tree with the retained
+Z2+Z3+Z4 remnant after standard right hepatectomy. It uses conservative
+Murray-style radius-cubed branch splits, a documented blood viscosity, and a
+flow-consistent effective radius only for WSS post-processing. The generated
+JSON and edge CSV record the assumptions and scenario summaries:
+
+```powershell
+python simulation/ha_habr_wss_comparison.py
+```
+
+The interactive result is available locally at `flow-ha-wss/index.html` and,
+after GitHub Pages deployment, at
+`https://hwe001.github.io/hepatic-vascular-tree-viewer/flow-ha-wss/`. The HABR
+case is an illustrative sensitivity scenario, not a calibrated postoperative
+prediction or a substitute for 3-D CFD.
