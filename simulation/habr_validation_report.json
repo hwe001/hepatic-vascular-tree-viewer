@@ -1,0 +1,59 @@
+{
+  "archive": "E:\\GoogleDrive_backup\\Student_Projects\\Summer Projects\\summer_2012\\Liver_Circulation\\HABR\\archived_habr_run_output.mat",
+  "checks": {
+    "oldQpv_mL_min": {
+      "expected": 1059.03610467716,
+      "observed": 1059.03610467716,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "oldQha_mL_min": {
+      "expected": 401.44723744626776,
+      "observed": 401.44723744626776,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "newQpv_mL_min": {
+      "expected": 1060.0,
+      "observed": 1060.0,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "newQha_mL_min": {
+      "expected": 401.2465930706803,
+      "observed": 401.2465930706803,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "changePV_percent": {
+      "expected": -0.09101628533560054,
+      "observed": -0.09101628533560054,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "changeHA_percent": {
+      "expected": -0.049980260634939606,
+      "observed": -0.049980260634939606,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "Rpv_post": {
+      "expected": 37752922.40883528,
+      "observed": 37752922.40883528,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "Rha_post": {
+      "expected": 1893994610.988503,
+      "observed": 1893994610.988503,
+      "absolute_error": 0.0,
+      "pass": true
+    },
+    "HV_conservation": {
+      "maximum_absolute_error": 3.410605131648481e-13,
+      "pass": true
+    }
+  },
+  "trajectory_available": false,
+  "note": "The archived MAT file contains scalar controller outputs only; full Simulink trajectories were not available for comparison."
+}

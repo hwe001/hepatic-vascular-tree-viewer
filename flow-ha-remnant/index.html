@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>Post-resection hepatic-artery flow: segments II, III and IV</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#f7f8fa;font:14px Arial,sans-serif;color:#17202a}
+    #view{display:block;width:100%;height:100%}
+    #panel{position:fixed;left:14px;top:14px;width:min(390px,calc(100vw - 28px));max-height:calc(100vh - 28px);overflow:auto;background:rgba(255,255,255,.94);border-radius:12px;padding:14px 16px;box-shadow:0 3px 18px #0002;line-height:1.35}
+    h1{font-size:20px;margin:0 0 7px}h2{font-size:15px;margin:13px 0 5px;border-top:1px solid #d8dee5;padding-top:9px}
+    .note{font-size:12px;color:#55616d}.row{display:flex;gap:8px;align-items:center;margin:6px 0}.row label{flex:1}.row input[type=number]{width:78px}.row input[type=range]{flex:1}
+    button{border:0;border-radius:6px;background:#2d6cdf;color:white;padding:7px 11px;cursor:pointer}button.secondary{background:#64748b}
+    #metrics{background:#eef5ff;border-left:4px solid #2d6cdf;padding:8px;margin-top:8px;font-size:13px}.metric{display:flex;justify-content:space-between;gap:12px}.metric b{font-variant-numeric:tabular-nums}
+    #legend{margin-top:8px;font-size:12px}.bar{height:11px;border-radius:6px;background:linear-gradient(90deg,#1646d8,#00b9df,#16b85a,#ffd000,#e82222);margin:3px 0}
+    #status{font-size:12px;color:#475569;margin-top:8px}.warn{color:#8a4b08}
+  </style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<section id="panel">
+  <h1>Post-resection HA flow</h1>
+  <div class="note">Root-to-remnant hepatic-artery supply for portal zones Z2 + Z3 + Z4 (segments II + III + IV). Only paths serving those exploratory zones are shown.</div>
+  <h2>Scenario inputs</h2>
+  <div class="row"><label>Total portal flow (mL/min)</label><input id="pv" type="number" min="1" value="800" step="10"></div>
+  <div class="row"><label>Intact HA mean (mL/min)</label><input id="intact" type="number" min="1" value="250" step="5"></div>
+  <div class="row"><label>Post-resection HABR HA mean (mL/min)</label><input id="post" type="number" min="1" value="150" step="5"></div>
+  <div class="row"><label>Pulse amplitude</label><input id="amp" type="range" min="0" max="0.5" value="0.25" step="0.01"><output id="ampOut">25%</output></div>
+  <div class="row"><label>Time in cardiac cycle</label><input id="time" type="range" min="0" max="1" value="0" step="0.002"><output id="timeOut">0.00 s</output></div>
+  <div class="row"><button id="play">Play waveform</button><button class="secondary" id="fit">Fit view</button></div>
+  <div id="metrics"></div>
+  <div id="legend"><b>HA flow per retained segment</b><div class="bar"></div><span id="legendText"></span></div>
+  <div id="status"></div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/three@0.84.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.84.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(() => {
+  const canvas=document.getElementById('view'), renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xf7f8fa,1);
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(35,1,.1,10000);
+  const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.enablePan=true;controls.screenSpacePanning=true;
+  controls.mouseButtons={ORBIT:THREE.MOUSE.LEFT,ZOOM:THREE.MOUSE.MIDDLE,PAN:THREE.MOUSE.RIGHT};
+  scene.add(new THREE.HemisphereLight(0xffffff,0x667788,1.5));const key=new THREE.DirectionalLight(0xffffff,1.8);key.position.set(1,2,3);scene.add(key);
+  const group=new THREE.Group();scene.add(group);let data,centers=[],nodeById={},zoneByNode={},retainedEdges=[],retainedTerminals=[],allTerminals=[],edgeMean=new Map(),edgeMeshes=[],playing=false,last=performance.now();
+  const $=id=>document.getElementById(id), zones=[2,3,4], RED=0xe23b2f;
+  function centerFromZone(z){const v=z.vertices,n=v.length/3,c=new THREE.Vector3();for(let i=0;i<v.length;i+=3)c.add(new THREE.Vector3(v[i],v[i+1],v[i+2]));return c.multiplyScalar(1/n)}
+  function nearestZone(p){let best=0,d=Infinity;centers.forEach((c,i)=>{const x=p.distanceToSquared(c);if(x<d){d=x;best=i+1}});return best}
+  function classify(){zoneByNode={};Object.values(nodeById).forEach(n=>zoneByNode[n.id]=nearestZone(new THREE.Vector3(...n.p)))}
+  function topology(){const children={},parents={};Object.keys(nodeById).forEach(id=>{children[id]=[];parents[id]=[]});data.edges.forEach(e=>{if(children[e.a])children[e.a].push(e);if(parents[e.b])parents[e.b].push(e.a)});allTerminals=Object.keys(children).map(Number).filter(id=>children[id].length===0);retainedTerminals=allTerminals.filter(id=>zones.includes(zoneByNode[id]));const need=new Set(retainedTerminals),stack=retainedTerminals.slice();while(stack.length){const id=stack.pop();(parents[id]||[]).forEach(p=>{if(!need.has(p)){need.add(p);stack.push(p)}})}retainedEdges=data.edges.filter(e=>need.has(e.a)&&need.has(e.b));const leaves=new Set(retainedTerminals),retainedCounts={};function count(id){if(retainedCounts[id]!=null)return retainedCounts[id];const kids=(children[id]||[]).filter(e=>need.has(e.b));retainedCounts[id]=kids.length?kids.reduce((s,e)=>s+count(e.b),0):(leaves.has(+id)?1:0);return retainedCounts[id]}const root=data.rootId==null?0:data.rootId;count(root);edgeMean=new Map();retainedEdges.forEach(e=>edgeMean.set(e,retainedCounts[e.b]||0));}
+  function color(v,min,max){const t=Math.max(0,Math.min(1,(v-min)/Math.max(1e-9,max-min)));return new THREE.Color().setHSL((1-t)*.67,.9,.5)}
+  function rebuild(){while(group.children.length)group.remove(group.children[0]);edgeMeshes=[];const post=+$('post').value||150;const mat=new THREE.MeshPhongMaterial({color:RED,transparent:true,opacity:.92});retainedEdges.forEach(e=>{const a=nodeById[e.a],b=nodeById[e.b],A=new THREE.Vector3(...a.p),B=new THREE.Vector3(...b.p),v=B.clone().sub(A),L=v.length();if(L<1e-6)return;const radius=Math.max(.07,(+e.radius||.18)*3.0),geo=new THREE.CylinderGeometry(radius,radius,L,7,1,false),mesh=new THREE.Mesh(geo,mat);mesh.position.copy(A.clone().add(B).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());mesh.renderOrder=5;group.add(mesh);edgeMeshes.push({mesh,e})});const root=nodeById[data.rootId==null?0:data.rootId];if(root){const sphere=new THREE.Mesh(new THREE.SphereGeometry(2.2,16,10),new THREE.MeshPhongMaterial({color:0xf39c12}));sphere.position.set(...root.p);group.add(sphere)};fit();update();}
+  function update(){const intact=+$('intact').value||250,pv=+$('pv').value||800,post=+$('post').value||150,amp=+$('amp').value||0,t=+$('time').value||0,pre=intact*retainedTerminals.length/allTerminals.length,phase=2*Math.PI*1.2*t,qRoot=post*(1+amp*Math.sin(phase));const leafQ=qRoot/retainedTerminals.length;edgeMeshes.forEach(({mesh,e})=>{const q=(edgeMean.get(e)||0)*leafQ;mesh.material= new THREE.MeshPhongMaterial({color:color(q,0,qRoot),transparent:true,opacity:.94,side:THREE.DoubleSide});});$('ampOut').value=Math.round(amp*100)+'%';$('timeOut').value=t.toFixed(2)+' s';$('metrics').innerHTML='<div class="metric"><span>Total portal flow</span><b>'+pv.toFixed(1)+' mL/min</b></div><div class="metric"><span>Intact remnant HA share</span><b>'+pre.toFixed(2)+' mL/min</b></div><div class="metric"><span>Post-resection HABR HA mean</span><b>'+post.toFixed(2)+' mL/min</b></div><div class="metric"><span>Current pulsatile HA root flow</span><b>'+qRoot.toFixed(2)+' mL/min</b></div><div class="metric"><span>Retained terminal sites</span><b>'+retainedTerminals.length+' / '+allTerminals.length+'</b></div>';$('legendText').textContent='0 to '+qRoot.toFixed(2)+' mL/min';$('status').innerHTML='<span class="warn">Scenario interpretation:</span> post-HABR HA is '+(post<pv?'below':'not below')+' total portal flow and '+(post>pre?'above':'not above')+' the intact Z2+Z3+Z4 HA share. Zone assignment is nearest-centroid exploratory anatomy, not a validated Couinaud map.';}
+  function fit(){const box=new THREE.Box3().setFromObject(group),size=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3()),r=Math.max(size.x,size.y,size.z)*.5||1;camera.position.copy(c).add(new THREE.Vector3(r*1.7,r*1.25,r*2.3));camera.near=Math.max(r/1000,.01);camera.far=Math.max(r*20,100);camera.updateProjectionMatrix();controls.target.copy(c);controls.update()}
+  function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+  ['pv','intact','post','amp'].forEach(id=>$(id).addEventListener('input',()=>{if(id==='post')rebuild();else update()}));$('time').addEventListener('input',update);$('fit').onclick=fit;$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause waveform':'Play waveform'};
+  Promise.all([fetch('../cco/data/cco_arterial15_repaired.json?v=ha-remnant-1').then(r=>r.json()),fetch('../data/portal_zones_volume.json?v=zones-remnant-1').then(r=>r.json())]).then(([d,z])=>{data=d;(data.nodes||[]).forEach(n=>nodeById[n.id]=n);centers=z.zones.map(centerFromZone);classify();topology();rebuild();$('status').insertAdjacentHTML('afterbegin','<b>Loaded node 0 inlet and '+retainedEdges.length+' root-to-remnant edges.</b><br>');}).catch(e=>{$('status').textContent='Could not load repaired HA tree or portal-zone geometry.';console.error(e)});
+  function animate(now){requestAnimationFrame(animate);const dt=(now-last)/1000;last=now;if(playing){$('time').value=(+$('time').value+dt)%1;update()}controls.update();renderer.render(scene,camera)}requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
