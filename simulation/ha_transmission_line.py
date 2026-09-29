@@ -189,7 +189,7 @@ def solve(data: dict, params: Parameters) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_repaired.json"))
+    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_repaired_murray.json"))
     parser.add_argument("--output", type=Path, default=Path("simulation/ha_transmission_line_result.json"))
     args = parser.parse_args()
     data = json.loads(args.geometry.read_text(encoding="utf-8"))

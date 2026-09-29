@@ -108,7 +108,7 @@ def retained_tree(data: dict, zone_data: dict, retained_zones: set[int]) -> tupl
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_repaired.json"))
+    parser.add_argument("--geometry", type=Path, default=Path("cco/data/cco_arterial15_repaired_murray.json"))
     parser.add_argument("--zones", type=Path, default=Path("data/portal_zones_volume.json"))
     parser.add_argument("--output", type=Path, default=Path("simulation/ha_remnant_postresection_result.json"))
     parser.add_argument("--post-ha-mean", type=float, default=150.0)
