@@ -72,7 +72,10 @@ def build_scenario(nodes, edges, adjacency, plane, total_flow, remnant):
             retained[node["id"]] = True
         else:
             p, normal = plane
-            retained[node["id"]] = dot([x - y for x, y in zip(node["p"], p)], normal) <= 0
+            # The HV asset uses the opposite viewing orientation from the PV
+            # and HA assets: the right-lobe drainage occupies the negative
+            # side of this partition. Keep the positive side for the remnant.
+            retained[node["id"]] = dot([x - y for x, y in zip(node["p"], p)], normal) >= 0
 
     components_data, _ = components(nodes, edges)
     edge_rows = []
@@ -165,7 +168,7 @@ def main():
             "intact_root_outflow_ml_min": INTACT_FLOW,
             "remnant_root_outflow_ml_min": REMNANT_FLOW,
             "flow_allocation": "prescribed total outflow distributed by retained terminal-site fraction in each connected component",
-            "resection": "standard right hepatectomy plane; nodes on the right-side half-space are hidden",
+            "resection": "standard right hepatectomy plane; the HV-specific negative half-space is hidden because this asset is oppositely oriented to the PV and HA assets",
             "caveat": "HV geometry is provisional and its anatomical outlet annotation remains pending; values are scenario outputs, not subject-specific measurements",
         },
         "scenarios": {
