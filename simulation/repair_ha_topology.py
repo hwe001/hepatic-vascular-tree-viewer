@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 SOURCE = Path("cco/data/cco_arterial15_provisional.json")
-OUTPUT = Path("cco/data/cco_arterial15_repaired.json")
+OUTPUT = Path("cco/data/cco_arterial15_unregularised.json")
 
 
 def components(data):

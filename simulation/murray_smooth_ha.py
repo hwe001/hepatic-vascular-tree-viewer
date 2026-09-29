@@ -48,8 +48,8 @@ def smooth(data: dict) -> tuple[dict, dict]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=Path, default=Path("cco/data/cco_arterial15_repaired.json"))
-    parser.add_argument("--output", type=Path, default=Path("cco/data/cco_arterial15_repaired_murray.json"))
+    parser.add_argument("--input", type=Path, default=Path("cco/data/cco_arterial15_unregularised.json"))
+    parser.add_argument("--output", type=Path, default=Path("cco/data/cco_arterial15_repaired_murray_resmoothed.json"))
     args = parser.parse_args()
     data = json.loads(args.input.read_text(encoding="utf-8"))
     smoothed, metadata = smooth(data)
