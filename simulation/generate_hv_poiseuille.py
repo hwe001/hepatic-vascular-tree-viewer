@@ -70,8 +70,14 @@ def build_scenario(nodes, edges, adjacency, plane, centers, total_flow, remnant)
     right_lobe_components = set()
     if remnant:
         for ids, _ in components_data:
+            scaffold = [x for x in ids if node_by_id[x].get("scaffold")]
+            component_anchor = 0 if 0 in ids else (min(scaffold) if scaffold else min(ids))
             zones = [min(range(len(centers)), key=lambda i: sum((node_by_id[x]["p"][j] - centers[i][j]) ** 2 for j in range(3))) for x in ids]
-            if sum(z >= 4 for z in zones) > len(zones) / 2:
+            # The visual audit identified the two large circled right-lobe
+            # HV components by their scaffold anchors. Remove both complete
+            # components; retaining fragments of either trunk misrepresents
+            # the post-hepatectomy anatomy.
+            if component_anchor in (0, 2) or sum(z >= 4 for z in zones) > len(zones) / 2:
                 right_lobe_components.update(ids)
     retained = {}
     for node in nodes:
@@ -178,7 +184,7 @@ def main():
             "intact_root_outflow_ml_min": INTACT_FLOW,
             "remnant_root_outflow_ml_min": REMNANT_FLOW,
             "flow_allocation": "prescribed total outflow distributed by retained terminal-site fraction in each connected component",
-            "resection": "standard right hepatectomy; HV nodes on the positive-side right-lobe half-space are removed, while negative-side nodes nearest to portal territories I-IV are retained; components dominated by V-VIII are removed in full",
+            "resection": "standard right hepatectomy; the two visually audited right-lobe HV components (scaffold anchors 0 and 2) and components dominated by V-VIII are removed in full; only the remaining remnant components are retained",
             "caveat": "HV geometry is provisional and its anatomical outlet annotation remains pending; values are scenario outputs, not subject-specific measurements",
         },
         "scenarios": {
