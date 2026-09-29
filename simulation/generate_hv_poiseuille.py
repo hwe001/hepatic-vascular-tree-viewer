@@ -79,13 +79,12 @@ def build_scenario(nodes, edges, adjacency, plane, centers, total_flow, remnant)
             retained[node["id"]] = True
         else:
             p, normal = plane
-            # The HV asset uses the opposite viewing orientation from the PV
-            # and HA assets: the right-lobe drainage occupies the negative
-            # side of this partition. Keep the positive side, and require the
-            # nearest portal territory to be in segments I-IV as a second
+            # The HV asset's displayed orientation places the right-lobe
+            # drainage on the positive side of this partition. Keep the
+            # negative side, and require the nearest portal territory to be in segments I-IV as a second
             # anatomical check. This removes the complete V-VIII subtree,
             # including its connecting edge, rather than only its terminals.
-            on_remnant_side = dot([x - y for x, y in zip(node["p"], p)], normal) >= 0
+            on_remnant_side = dot([x - y for x, y in zip(node["p"], p)], normal) <= 0
             nearest = min(range(len(centers)), key=lambda i: sum((node["p"][j] - centers[i][j]) ** 2 for j in range(3)))
             retained[node["id"]] = on_remnant_side and nearest < 4 and node["id"] not in right_lobe_components
 
@@ -179,7 +178,7 @@ def main():
             "intact_root_outflow_ml_min": INTACT_FLOW,
             "remnant_root_outflow_ml_min": REMNANT_FLOW,
             "flow_allocation": "prescribed total outflow distributed by retained terminal-site fraction in each connected component",
-            "resection": "standard right hepatectomy; HV nodes are retained only on the remnant half-space and when nearest to portal territories I-IV; components dominated by V-VIII are removed in full, while mixed proximal trunks are retained to their bifurcation",
+            "resection": "standard right hepatectomy; HV nodes on the positive-side right-lobe half-space are removed, while negative-side nodes nearest to portal territories I-IV are retained; components dominated by V-VIII are removed in full",
             "caveat": "HV geometry is provisional and its anatomical outlet annotation remains pending; values are scenario outputs, not subject-specific measurements",
         },
         "scenarios": {
