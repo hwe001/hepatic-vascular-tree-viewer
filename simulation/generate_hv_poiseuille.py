@@ -64,7 +64,7 @@ def components(nodes, edges):
     return result, adjacency
 
 
-def build_scenario(nodes, edges, adjacency, plane, total_flow, remnant):
+def build_scenario(nodes, edges, adjacency, plane, centers, total_flow, remnant):
     node_by_id = {n["id"]: n for n in nodes}
     retained = {}
     for node in nodes:
@@ -74,8 +74,13 @@ def build_scenario(nodes, edges, adjacency, plane, total_flow, remnant):
             p, normal = plane
             # The HV asset uses the opposite viewing orientation from the PV
             # and HA assets: the right-lobe drainage occupies the negative
-            # side of this partition. Keep the positive side for the remnant.
-            retained[node["id"]] = dot([x - y for x, y in zip(node["p"], p)], normal) >= 0
+            # side of this partition. Keep the positive side, and require the
+            # nearest portal territory to be in segments I-IV as a second
+            # anatomical check. This removes the complete V-VIII subtree,
+            # including its connecting edge, rather than only its terminals.
+            on_remnant_side = dot([x - y for x, y in zip(node["p"], p)], normal) >= 0
+            nearest = min(range(len(centers)), key=lambda i: sum((node["p"][j] - centers[i][j]) ** 2 for j in range(3)))
+            retained[node["id"]] = on_remnant_side and nearest < 4
 
     components_data, _ = components(nodes, edges)
     edge_rows = []
@@ -168,12 +173,12 @@ def main():
             "intact_root_outflow_ml_min": INTACT_FLOW,
             "remnant_root_outflow_ml_min": REMNANT_FLOW,
             "flow_allocation": "prescribed total outflow distributed by retained terminal-site fraction in each connected component",
-            "resection": "standard right hepatectomy plane; the HV-specific negative half-space is hidden because this asset is oppositely oriented to the PV and HA assets",
+            "resection": "standard right hepatectomy; HV nodes are retained only on the remnant half-space and when nearest to portal territories I-IV; V-VIII branches and their connecting edges are hidden",
             "caveat": "HV geometry is provisional and its anatomical outlet annotation remains pending; values are scenario outputs, not subject-specific measurements",
         },
         "scenarios": {
-            "intact_pre_hepatectomy": build_scenario(nodes, edges, adjacency, plane, INTACT_FLOW, False),
-            "remnant_post_right_hepatectomy": build_scenario(nodes, edges, adjacency, plane, REMNANT_FLOW, True),
+            "intact_pre_hepatectomy": build_scenario(nodes, edges, adjacency, plane, zone_centers(), INTACT_FLOW, False),
+            "remnant_post_right_hepatectomy": build_scenario(nodes, edges, adjacency, plane, zone_centers(), REMNANT_FLOW, True),
         },
     }
     OUTPUT.write_text(json.dumps(report, indent=2))
