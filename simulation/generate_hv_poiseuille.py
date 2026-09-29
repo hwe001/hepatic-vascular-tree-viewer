@@ -66,6 +66,13 @@ def components(nodes, edges):
 
 def build_scenario(nodes, edges, adjacency, plane, centers, total_flow, remnant):
     node_by_id = {n["id"]: n for n in nodes}
+    components_data, _ = components(nodes, edges)
+    right_lobe_components = set()
+    if remnant:
+        for ids, _ in components_data:
+            zones = [min(range(len(centers)), key=lambda i: sum((node_by_id[x]["p"][j] - centers[i][j]) ** 2 for j in range(3))) for x in ids]
+            if sum(z >= 4 for z in zones) > len(zones) / 2:
+                right_lobe_components.update(ids)
     retained = {}
     for node in nodes:
         if not remnant:
@@ -80,9 +87,8 @@ def build_scenario(nodes, edges, adjacency, plane, centers, total_flow, remnant)
             # including its connecting edge, rather than only its terminals.
             on_remnant_side = dot([x - y for x, y in zip(node["p"], p)], normal) >= 0
             nearest = min(range(len(centers)), key=lambda i: sum((node["p"][j] - centers[i][j]) ** 2 for j in range(3)))
-            retained[node["id"]] = on_remnant_side and nearest < 4
+            retained[node["id"]] = on_remnant_side and nearest < 4 and node["id"] not in right_lobe_components
 
-    components_data, _ = components(nodes, edges)
     edge_rows = []
     total_sites = 0
     component_models = []
@@ -173,7 +179,7 @@ def main():
             "intact_root_outflow_ml_min": INTACT_FLOW,
             "remnant_root_outflow_ml_min": REMNANT_FLOW,
             "flow_allocation": "prescribed total outflow distributed by retained terminal-site fraction in each connected component",
-            "resection": "standard right hepatectomy; HV nodes are retained only on the remnant half-space and when nearest to portal territories I-IV; V-VIII branches and their connecting edges are hidden",
+            "resection": "standard right hepatectomy; HV nodes are retained only on the remnant half-space and when nearest to portal territories I-IV; components dominated by V-VIII are removed in full, while mixed proximal trunks are retained to their bifurcation",
             "caveat": "HV geometry is provisional and its anatomical outlet annotation remains pending; values are scenario outputs, not subject-specific measurements",
         },
         "scenarios": {
