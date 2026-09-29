@@ -44,7 +44,37 @@ def retained_tree(data: dict, zone_data: dict, retained_zones: set[int]) -> tupl
         )
 
     terminals = [node_id for node_id, outgoing in children.items() if not outgoing]
-    retained_terminals = [node_id for node_id in terminals if zone_of[node_id] in retained_zones]
+    root = int(data.get("rootId", 0))
+
+    def descendant_nodes(start: int) -> list[int]:
+        result = []
+        stack = [start]
+        seen = set()
+        while stack:
+            node_id = stack.pop()
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            result.append(node_id)
+            stack.extend(edge["b"] for edge in children[node_id])
+        return result
+
+    def descendant_terminals(start: int) -> list[int]:
+        return [node_id for node_id in descendant_nodes(start) if not children[node_id]]
+
+    split = root
+    while len(children[split]) == 1:
+        split = int(children[split][0]["b"])
+    split_children = children[split]
+    keep_child = max(
+        split_children,
+        key=lambda edge: sum(zone_of[node_id] in retained_zones for node_id in descendant_terminals(int(edge["b"]))),
+    )["b"]
+    keep_side = set(descendant_nodes(int(keep_child)))
+    retained_terminals = [
+        node_id for node_id in terminals
+        if zone_of[node_id] in retained_zones and node_id in keep_side
+    ]
     needed = set(retained_terminals)
     stack = list(retained_terminals)
     while stack:
@@ -60,7 +90,7 @@ def retained_tree(data: dict, zone_data: dict, retained_zones: set[int]) -> tupl
         edge for edge in data["edges"]
         if int(edge["a"]) in needed and int(edge["b"]) in needed
     ]
-    filtered["rootId"] = int(data.get("rootId", 0))
+    filtered["rootId"] = root
     meta = {
         "retained_zones": sorted(retained_zones),
         "zone_assignment": "nearest portal-zone centroid",
@@ -69,6 +99,9 @@ def retained_tree(data: dict, zone_data: dict, retained_zones: set[int]) -> tupl
         "retained_node_count": len(filtered["nodes"]),
         "retained_edge_count": len(filtered["edges"]),
         "retained_terminal_ids": retained_terminals,
+        "split_node": split,
+        "kept_branch_child": int(keep_child),
+        "removed_branch_children": [int(edge["b"]) for edge in split_children if int(edge["b"]) != int(keep_child)],
     }
     return filtered, meta
 
