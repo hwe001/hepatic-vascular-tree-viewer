@@ -1,12 +1,189 @@
 {
-  "model": "provisional three-hepatic-vein-to-IVC topology",
+  "model": "repaired three-hepatic-vein-to-IVC topology",
   "outlet": "IVC",
-  "ivc_path_edges": [[58, 0], [0, 59], [59, 1331]],
-  "junctions": [
-    {"name": "Left hepatic vein", "edge": [0, 1], "color": "#7b1fa2"},
-    {"name": "Middle hepatic vein", "edge": [0, 10], "color": "#00897b"},
-    {"name": "Right hepatic vein", "edge": [0, 255], "color": "#ef6c00"}
+  "ivc_path_edges": [
+    [
+      58,
+      0
+    ],
+    [
+      0,
+      59
+    ],
+    [
+      59,
+      1331
+    ]
   ],
-  "flow_direction": "left, middle and right hepatic veins drain toward the IVC; the IVC continues along the high-radius scaffold path",
-  "status": "Provisional topology assignment from the measured scaffold; distal CCO completion remains subject to anatomical validation"
+  "junctions": [
+    {
+      "name": "Left hepatic vein",
+      "edge": [
+        0,
+        1
+      ],
+      "color": "#7b1fa2"
+    },
+    {
+      "name": "Middle hepatic vein",
+      "edge": [
+        0,
+        10
+      ],
+      "color": "#00897b"
+    },
+    {
+      "name": "Right hepatic vein",
+      "edge": [
+        0,
+        255
+      ],
+      "color": "#ef6c00"
+    }
+  ],
+  "component_assignments": [
+    {
+      "component_anchor": 0,
+      "size": 310,
+      "branch": "ivc_scaffold",
+      "virtual_link": null
+    },
+    {
+      "component_anchor": 2,
+      "size": 346,
+      "branch": "left",
+      "virtual_link": {
+        "from_component_anchor": 2,
+        "to_junction_node": 1,
+        "branch": "Left hepatic vein",
+        "length": 0.28978536025588714,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 20,
+      "size": 172,
+      "branch": "right",
+      "virtual_link": {
+        "from_component_anchor": 20,
+        "to_junction_node": 255,
+        "branch": "Right hepatic vein",
+        "length": 18.54090958969699,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 26,
+      "size": 73,
+      "branch": "right",
+      "virtual_link": {
+        "from_component_anchor": 26,
+        "to_junction_node": 255,
+        "branch": "Right hepatic vein",
+        "length": 66.75781745451638,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 31,
+      "size": 79,
+      "branch": "middle",
+      "virtual_link": {
+        "from_component_anchor": 31,
+        "to_junction_node": 10,
+        "branch": "Middle hepatic vein",
+        "length": 63.53371221766215,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 37,
+      "size": 260,
+      "branch": "right",
+      "virtual_link": {
+        "from_component_anchor": 37,
+        "to_junction_node": 255,
+        "branch": "Right hepatic vein",
+        "length": 5.60805663261153,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 50,
+      "size": 154,
+      "branch": "right",
+      "virtual_link": {
+        "from_component_anchor": 50,
+        "to_junction_node": 255,
+        "branch": "Right hepatic vein",
+        "length": 59.61109915907041,
+        "inferred": true
+      }
+    },
+    {
+      "component_anchor": 55,
+      "size": 227,
+      "branch": "right",
+      "virtual_link": {
+        "from_component_anchor": 55,
+        "to_junction_node": 255,
+        "branch": "Right hepatic vein",
+        "length": 61.170075841563104,
+        "inferred": true
+      }
+    }
+  ],
+  "virtual_links": [
+    {
+      "from_component_anchor": 2,
+      "to_junction_node": 1,
+      "branch": "Left hepatic vein",
+      "length": 0.28978536025588714,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 20,
+      "to_junction_node": 255,
+      "branch": "Right hepatic vein",
+      "length": 18.54090958969699,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 26,
+      "to_junction_node": 255,
+      "branch": "Right hepatic vein",
+      "length": 66.75781745451638,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 31,
+      "to_junction_node": 10,
+      "branch": "Middle hepatic vein",
+      "length": 63.53371221766215,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 37,
+      "to_junction_node": 255,
+      "branch": "Right hepatic vein",
+      "length": 5.60805663261153,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 50,
+      "to_junction_node": 255,
+      "branch": "Right hepatic vein",
+      "length": 59.61109915907041,
+      "inferred": true
+    },
+    {
+      "from_component_anchor": 55,
+      "to_junction_node": 255,
+      "branch": "Right hepatic vein",
+      "length": 61.170075841563104,
+      "inferred": true
+    }
+  ],
+  "flow_direction": "distal component anchors drain through inferred virtual links into one of three hepatic-vein junctions and then into the IVC",
+  "status": "Derived topology repair; original geometry and measured scaffold are unchanged, and virtual links require anatomical validation"
 }
